@@ -58,13 +58,13 @@ while chrin != 48:
     myscreen.addstr(yLine, 1, "## Flight Configuration ##")
     yLine += 1
     myscreen.addstr(yLine, 1, "SAS Status:")
-    myscreen.addstr(yLine, 20, str((tele.read_sasValue())))
+    myscreen.addstr(yLine, 20, str((tele.sas(2))))
     yLine += 1
     myscreen.addstr(yLine, 1, "RCS Status:")
-    myscreen.addstr(yLine, 20, str((tele.read_rcsValue())))
+    myscreen.addstr(yLine, 20, str((tele.rcs(2))))
     yLine += 1
     myscreen.addstr(yLine, 1, "Ext. Light Status:")
-    myscreen.addstr(yLine, 20, str((tele.read_lightValue())))
+    myscreen.addstr(yLine, 20, str((tele.light(2))))
     yLine += 1
     yLine += 1
 
@@ -82,6 +82,8 @@ while chrin != 48:
     myscreen.addstr(yLine, 1, "Solid Fuel:")
     myscreen.addstr(yLine, 20, str(int(tele.read_resource('SolidFuel'))))
     yLine += 1
+    yLine += 1
+    myscreen.addstr(yLine, 1, "Press 0 to exit")
 
     myscreen.refresh()
     chrin = myscreen.getch()
