@@ -12,3 +12,7 @@ Input Features:
 	-Keyed Switch 
 
 Input is currently setup for Gear, Light, SAS, RCS, Brake, Stage, Abort, and Safety.
+
+You probably just need to download the following files:  json_processor.py telemachus_plugin.py RocketPanelCombined
+
+The rest of the files are sub-versions that were used for testing different parts of the project.
