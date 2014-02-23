@@ -1,17 +1,31 @@
 # python 2.7
 
-
+# note: The data gathering portion of this should be centralized
+# At the begining of each loop all needed data should be collected
+# and then referenced as a local variable. I'll rewrite this when I
+# get the chance.
 import math
 import time
 import curses
 import telemachus_plugin as tele
 
 
-def formatReading(inputln):
-    return str(int(inputln)).zfill(filldigits)
+def formatRCC(inputln):  # Formating Reading Color Critical
+    if int(inputln) < 0:
+        inputln = str(int(inputln)).zfill(filldigits)
+        return inputln, curses.color_pair(2)
+    else:
+        return str(int(inputln)).zfill(filldigits)
 
 
 myscreen = curses.initscr()
+if curses.can_change_color:
+    curses.start_color()
+    curses.use_default_colors()
+curses.init_pair(1, curses.COLOR_GREEN, curses.COLOR_BLACK)
+curses.init_pair(2, curses.COLOR_RED, curses.COLOR_BLACK)
+
+
 curses.noecho()
 curses.cbreak()
 
@@ -30,7 +44,7 @@ while chrin != 48:
     myscreen.addstr(yLine, 1, "##     Mission Time:     ##", curses.A_STANDOUT)
     yLine += 1
     myscreen.addstr(yLine, 4, str(int(tele.read_missiontime()))
-        .zfill(21))
+        .zfill(21), curses.color_pair(1))
     yLine += 1
     yLine += 1
 
@@ -100,8 +114,11 @@ while chrin != 48:
         .zfill(filldigits))
     yLine += 1
     myscreen.addstr(yLine, 1, "Solid Fuel:")
-    myscreen.addstr(yLine, 20, str(int(tele.read_resource('SolidFuel'))
-        ).zfill(filldigits))
+    cSolidFuel = int(tele.read_resource('SolidFuel'))
+    if cSolidFuel < 0:
+        myscreen.addstr(yLine, 19, "# Empty #", curses.color_pair(2))
+    else:
+        myscreen.addstr(yLine, 20, str(cSolidFuel).zfill(filldigits))
     yLine += 1
     yLine += 1
     myscreen.addstr(yLine, 1, "Press 0 to exit")
