@@ -45,6 +45,8 @@ def drawVGauge(gLabel, percentVal, yCord, xCord):
                     barHeight - 10)
                 gauge.attroff(curses.color_pair(1))
         gauge.addstr(23, 6, str(percentVal).zfill(3) + '%')
+    elif percentVal < 0.1:
+        gauge.addstr(23, 6, 'Empty')
 
 
 myscreen = curses.initscr()
@@ -157,11 +159,16 @@ while chrin != 48:
     myscreen.addstr(maxY - 1, maxX - 19, " Press 0 to Exit ")
 
     #myscreen.vline(20, 35, curses.ACS_CKBOARD, 4)
-    drawVGauge("Test Gauge", 42, 1, 35)
+    #drawVGauge("Test Gauge", 42, 1, 35)
     drawVGauge("Electricity", int(tele.read_resource('ElectricCharge') /
-        1030 * 100), 1, 50)
+        int(tele.read_resource_max('ElectricCharge')) * 100), 1, 35)
     drawVGauge("Liquid Fuel", int(tele.read_resource('LiquidFuel') /
-        180 * 100), 1, 65)
+        int(tele.read_resource_max('LiquidFuel')) * 100), 1, 50)
+    drawVGauge("Solid Fuel", int(tele.read_resource('SolidFuel') /
+        (int(tele.read_resource_max('SolidFuel')) + 2) * 100), 1, 65)
+        # The above will need to be updated with a proper handling of
+        # Telemachus returning '-1' when there is none of a resource
+        # on board.Adding to (so as to get -1 / 2) is a mere stop gap.
     myscreen.refresh()
 
     chrin = myscreen.getch()
