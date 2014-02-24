@@ -20,7 +20,22 @@ import math
 import telemachus_plugin as tele
 import config
 
-ser = config.ser
+url = config.url()
+
+ser = serial.Serial(
+    port=config.arduinoSerialPort(),
+    #port='COM3',
+    #baudrate=115200, # Causes the arduino buffer to fill up
+    baudrate=9600, # Seems to be working well
+   # parity=serial.PARITY_ODD,
+   # stopbits=serial.STOPBITS_TWO,
+   # bytesize=serial.SEVENBITS
+)
+
+gearStatus = 0
+global gearStatus
+brakeStatus = 0
+global brakeStatus
 
 
 def clamp(num, minn, maxn):
@@ -51,7 +66,59 @@ def push_to_arduino(inputline):
     #ser.write("255, 255, 255 \n")
     #time.sleep(.2)
 
+def buttonHandler():
+    global gearStatus
+    global brakeStatus
+    global memB
+    global memBOLD
+    if memB[1] == '1' and memB[1] != memBOLD[1]:
+        if (memB[7] == '1'):  # Check the safety
+            tele.stage()
 
+    if memB[0] == '1' and memB[0] != memBOLD[0]:
+        if memB[7] == '1':  # Check the safety
+            tele.abort()
+
+    if int(memB[2]) == 1 and memB[2] != memBOLD[2]:
+        # Toggle gear based on what we did last time
+        if gearStatus == 1:  # Telemachus does not yet read gear status
+            tele.gear(0)
+            gearStatus = 0
+        elif gearStatus == 0:
+            tele.gear(1)
+            gearStatus = 1
+
+    if int(memB[3]) == 1 and memB[3] != memBOLD[3]:
+        # Toggle Light based on the Telemachus reading
+        if tele.light(2) == 1:
+            tele.light(0)
+        elif tele.light(2) == 0:
+            tele.light(1)
+
+    if int(memB[4]) == 1 and memB[4] != memBOLD[4]:
+        # Toggle brake based on what we did last time
+        if brakeStatus == 1:  # Telemachus does not yet read brake status
+            tele.brake(0)
+            brakeStatus = 0
+        elif brakeStatus == 0:
+            tele.brake(1)
+            brakeStatus = 1
+
+    if int(memB[5]) == 1 and memB[5] != memBOLD[5]:
+        # Toggle RCS based on the Telemachus reading
+        if tele.rcs(2) == 1:
+            tele.rcs(0)
+        elif tele.rcs(2) == 0:
+            tele.rcs(1)
+
+    if int(memB[6]) == 1 and memB[6] != memBOLD[6]:
+        # Toggle SAS based on the Telemachus reading
+        if tele.sas(2) == 1:
+            tele.sas(0)
+        elif tele.sas(2) == 0:
+            tele.sas(1)
+
+#########################################################################
 #Time to get started...
 print 'Now starting program.'
 print 'Warming up the Arduino...'
@@ -61,10 +128,11 @@ print 'Starting main loop'
 
 program_runtime = time.time()
 arduino_sleep_marker = 0
+button_sleep_marker = 0
 memB = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+memBOLD = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 n = 0
-gearStatus = 0
-brakeStatus = 0
+
 
 while 1:
     loop_start_time = time.time()
@@ -93,18 +161,13 @@ while 1:
             print '.............'
             push_to_arduino(memA)
             print memA
-            #print tele.read_verticalspeed()
-            #print climbgauge - 127
-            #print climbgauge
-            #time.sleep(1) #Usefull for debugging
-
         finally:
             arduino_sleep_marker = 0
-    #print ser.read(1)
-    if ser.inWaiting > 14:
+
+    if ser.inWaiting > 9:
         serCharIn = str(ser.read(1))
         if serCharIn == '[':
-            while n < 16:
+            while n < 10:
                 serCharIn = str(ser.read(1))
                 if serCharIn == ']':
                     n = 0
@@ -113,62 +176,17 @@ while 1:
                 else:
                     memB[n] = serCharIn
                 n += 1
-                if n == 16:
+                if n == 11:
                     ser.flushInput()
-    print memB
 
-    if memB[1] == '1':
-        if (memB[7] == '1'):  # Check the safety
-            tele.stage()
+    if button_sleep_marker > 0.1:
+        buttonHandler()  # Reads memB for which buttons are pressed, then sends
+                         # calls to telemachus as needed.
+        button_sleep_marker = 0
 
-    if memB[0] == '1':
-        if memB[7] == '1':  # Check the safety
-            tele.abort()
-
-    if int(memB[2]) == 1:  # Toggle gear based on what we did last time
-        if gearStatus == 1:  # Telemachus does not yet read gear status
-            tele.gear(0)
-            gearStatus = 0
-        elif gearStatus == 0:
-            tele.gear(1)
-            gearStatus = 1
-
-    if int(memB[3]) == 1:  # Toggle RCS based on the Telemachus reading
-        if tele.light(2) == 1:
-            tele.light(0)
-        elif tele.light(2) == 0:
-            tele.light(1)
-
-    if int(memB[4]) == 1:  # Toggle brake based on what we did last time
-        if brakeStatus == 1:  # Telemachus does not yet read brake status
-            tele.brake(0)
-            brakeStatus = 0
-        elif brakeStatus == 0:
-            tele.brake(1)
-            brakeStatus = 1
-
-    if int(memB[5]) == 1:  # Toggle RCS based on the Telemachus reading
-        if tele.rcs(2) == 1:
-            tele.rcs(0)
-        elif tele.rcs(2) == 0:
-            tele.rcs(1)
-
-    if int(memB[6]) == 1:  # Toggle SAS based on the Telemachus reading
-        if tele.sas(2) == 1:
-            tele.sas(0)
-        elif tele.sas(2) == 0:
-            tele.sas(1)
-
-
-#    try:
-#        serline = ser.readline()
-#        print serline
-#    finally:
-#        pass
-#    print read_facing('pitch'), read_facing('roll'), read_facing('yaw')
-#    print (round(read_universaltime(), 2), read_throttle(), round(read_asl()),
-#    round(read_periapsis()), round(read_apoapsis()), round(read_resource(
-#    'LiquidFuel'), 3))
+        print memB
+        print memBOLD
+        memBOLD = list(memB)
 
     time.sleep(0.05)
     # This is used mostly to save CPU cycles and battery life of my laptop
@@ -176,5 +194,5 @@ while 1:
     loop_end_time = time.time()
     loop_time = loop_end_time - loop_start_time
     arduino_sleep_marker += loop_time
-    #print ('Loop Time:' + str(loop_time) + 'Arduino:' +
-    #str(arduino_sleep_marker))
+    button_sleep_marker += loop_time
+
