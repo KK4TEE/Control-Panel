@@ -4,6 +4,12 @@
 # At the begining of each loop all needed data should be collected
 # and then referenced as a local variable. I'll rewrite this when I
 # get the chance.
+
+# Notes on screen layout:
+# Standard window block is ideally 25y by 15x chr
+# Text display window is 25y by 30x chr
+# Each gauge window is   25y by 15x including boarders
+# Resource window is 10y by 15x
 import math
 import time
 import curses
@@ -75,90 +81,101 @@ def getFlightData(dIN):
         return dIN
 
 
-def drawStatusWindow():
-    global yLine
-    myscreen.addstr(yLine, 1, "##     Mission Time:     ##", curses.A_STANDOUT)
-    yLine += 1
-    myscreen.addstr(yLine, 4, str(round(fd['MET'], 1))
+def drawPrimaryStatusWindow(yCord, xCord):
+    primaryStatusW = myscreen.subwin(25, 30, yCord, xCord)
+    primaryStatusW.border()
+    yL = 0  # local variable for the Y line
+    #xL = 0  # local variable for the X line
+    primaryStatusW.addstr(yL, 1, "##     Mission Time:      ##", curses.A_STANDOUT)
+    yL += 1
+    primaryStatusW.addstr(yL, 4, str(round(fd['MET'], 1))
         .zfill(21), curses.color_pair(1))
-    yLine += 1
-    yLine += 1
+    yL += 1
+    yL += 1
 
-    myscreen.addstr(yLine, 1, "ASL:")
-    myscreen.addstr(yLine, 20, str(fd['ASL'])
+    primaryStatusW.addstr(yL, 1, "ASL:")
+    primaryStatusW.addstr(yL, 20, str(fd['ASL'])
         .zfill(filldigits))
-    yLine += 1
-    yLine += 1
+    yL += 1
+    yL += 1
 
-    myscreen.addstr(yLine, 1, "##  Orbital Information  ##", curses.A_STANDOUT)
-    yLine += 1
-    myscreen.addstr(yLine, 1, "Apoapsis:")
-    myscreen.addstr(yLine, 20, str(fd['Ap'])
+    primaryStatusW.addstr(yL, 1, "##  Orbital Information   ##", curses.A_STANDOUT)
+    yL += 1
+    primaryStatusW.addstr(yL, 1, "Apoapsis:")
+    primaryStatusW.addstr(yL, 20, str(fd['Ap'])
         .zfill(filldigits))
-    yLine += 1
-    myscreen.addstr(yLine, 1, "Periapsis:")
-    myscreen.addstr(yLine, 20, str(fd['Pe'])
+    yL += 1
+    primaryStatusW.addstr(yL, 1, "Periapsis:")
+    primaryStatusW.addstr(yL, 20, str(fd['Pe'])
         .zfill(filldigits))
-    yLine += 1
-    myscreen.addstr(yLine, 1, "Eccentricity:")
-    myscreen.addstr(yLine, 20, str(round(fd['Eccentricity'], 6))
+    yL += 1
+    primaryStatusW.addstr(yL, 1, "Eccentricity:")
+    primaryStatusW.addstr(yL, 20, str(round(fd['Eccentricity'], 6))
         .zfill(filldigits))
-    yLine += 1
-    myscreen.addstr(yLine, 1, "Inclination:")
-    myscreen.addstr(yLine, 20, str(round(fd['Inclination'], 6))
+    yL += 1
+    primaryStatusW.addstr(yL, 1, "Inclination:")
+    primaryStatusW.addstr(yL, 20, str(round(fd['Inclination'], 6))
         .zfill(filldigits))
-    yLine += 1
-    myscreen.addstr(yLine, 1, "Orbital Period:")
-    myscreen.addstr(yLine, 20, str(round(fd['Orbital Period'], 1))
+    yL += 1
+    primaryStatusW.addstr(yL, 1, "Orbital Period:")
+    primaryStatusW.addstr(yL, 20, str(round(fd['Orbital Period'], 1))
         .zfill(filldigits))
-    yLine += 1
-    myscreen.addstr(yLine, 1, "Time to Ap:")
-    myscreen.addstr(yLine, 20, str(round(fd['Time to Ap'], 1))
+    yL += 1
+    primaryStatusW.addstr(yL, 1, "Time to Ap:")
+    primaryStatusW.addstr(yL, 20, str(round(fd['Time to Ap'], 1))
         .zfill(filldigits))
-    yLine += 1
-    myscreen.addstr(yLine, 1, "Time to Pe:")
-    myscreen.addstr(yLine, 20, str(round(fd['Time to Pe'], 1))
+    yL += 1
+    primaryStatusW.addstr(yL, 1, "Time to Pe:")
+    primaryStatusW.addstr(yL, 20, str(round(fd['Time to Pe'], 1))
         .zfill(filldigits))
-    yLine += 1
-    yLine += 1
+    yL += 1
+    yL += 1
 
-    myscreen.addstr(yLine, 1, "##  Flight Configuration  ##",
+    primaryStatusW.addstr(yL, 1, "##  Flight Configuration  ##",
          curses.A_STANDOUT)
-    yLine += 1
-    myscreen.addstr(yLine, 1, "SAS Status:")
-    myscreen.addstr(yLine, 20, str(fd['SAS Status']))
-    yLine += 1
-    myscreen.addstr(yLine, 1, "RCS Status:")
-    myscreen.addstr(yLine, 20, str(fd['RCS Status']))
-    yLine += 1
-    myscreen.addstr(yLine, 1, "Ext. Light Status:")
-    myscreen.addstr(yLine, 20, str(fd['Light Status']))
-    yLine += 1
-    yLine += 1
+    yL += 1
+    primaryStatusW.addstr(yL, 1, "SAS Status:")
+    primaryStatusW.addstr(yL, 20, str(fd['SAS Status']))
+    yL += 1
+    primaryStatusW.addstr(yL, 1, "RCS Status:")
+    primaryStatusW.addstr(yL, 20, str(fd['RCS Status']))
+    yL += 1
+    primaryStatusW.addstr(yL, 1, "Ext. Light Status:")
+    primaryStatusW.addstr(yL, 20, str(fd['Light Status']))
+    yL += 1
+    return yL
 
-    myscreen.addstr(yLine, 1, "##       Resources        ##",
+
+
+
+def drawResourceWindow(yCord, xCord):
+    resourceW = myscreen.subwin(10, 30, yCord, xCord)
+    resourceW.border()
+    yL = 0  # local variable for the Y line
+    #xL = 0  # local variable for the X line
+    resourceW.addstr(yL, 1, "##       Resources        ##",
         curses.A_STANDOUT)
-    yLine += 1
-    myscreen.addstr(yLine, 1, "Electric Charge:")
-    myscreen.addstr(yLine, 20, str(int(fd['ElectricCharge']))
+    yL += 1
+    resourceW.addstr(yL, 1, "Electric Charge:")
+    resourceW.addstr(yL, 20, str(int(fd['ElectricCharge']))
         .zfill(filldigits))
-    yLine += 1
-    myscreen.addstr(yLine, 1, "Liquid Fuel:")
-    myscreen.addstr(yLine, 20, str(int(fd['LiquidFuel']))
+    yL += 1
+    resourceW.addstr(yL, 1, "Liquid Fuel:")
+    resourceW.addstr(yL, 20, str(int(fd['LiquidFuel']))
         .zfill(filldigits))
-    yLine += 1
-    myscreen.addstr(yLine, 1, "Oxidizer:")
-    myscreen.addstr(yLine, 20, str(int(fd['Oxidizer']))
+    yL += 1
+    resourceW.addstr(yL, 1, "Oxidizer:")
+    resourceW.addstr(yL, 20, str(int(fd['Oxidizer']))
         .zfill(filldigits))
-    yLine += 1
-    myscreen.addstr(yLine, 1, "Solid Fuel:")
+    yL += 1
+    resourceW.addstr(yL, 1, "Solid Fuel:")
     cSolidFuel = int(fd['SolidFuel'])
     if cSolidFuel < 0:
-        myscreen.addstr(yLine, 20, "# None #", curses.color_pair(3))
+        resourceW.addstr(yL, 20, "# None #", curses.color_pair(3))
     else:
-        myscreen.addstr(yLine, 20, str(cSolidFuel).zfill(filldigits))
-    yLine += 1
-    yLine += 1
+        resourceW.addstr(yL, 20, str(cSolidFuel).zfill(filldigits))
+    yL += 1
+    return yL
 
 
 def formatRCC(inputln):  # Formating Reading Color Critical
@@ -173,7 +190,7 @@ def drawVGauge(gLabel, percentVal, yCord, xCord):
     # Draws a gauge from 0-100% that is 30 rows x 15 Coll with the top left
     # corner at (yCord, xCord)
     percentVal = round(percentVal, 1)
-    if percentVal > 100:
+    if percentVal >= 100:
         percentVal = int(100)
     gauge = myscreen.subwin(25, 15, yCord, xCord)
     gauge.clear()
@@ -205,9 +222,6 @@ def drawVGauge(gLabel, percentVal, yCord, xCord):
 
 
 ###  Arduino Utilities
-
-
-
 def push_to_arduino(inputline):
     #ser.flushOutput()
     # Send data to the Arduino and end w/ a newline
@@ -333,14 +347,16 @@ while chrin != 48:
 
     #if fd['Radio Contact'] is True:
     if fd['Radio Contact'] is True and fd['Previous Radio Contact'] is True:
-        drawStatusWindow()
+        drawPrimaryStatusWindow(1, 1)
+        drawResourceWindow(26, 1)
     elif fd['Radio Contact'] is False:
         myscreen.addstr(max(yLine, 27), maxX / 2 - 12,
             "### Radio Contact Lost ###", curses.A_STANDOUT)
     elif fd['Radio Contact'] is True and fd['Previous Radio Contact'] is False:
         myscreen.clear()
         myscreen.border()
-        drawStatusWindow()
+        drawPrimaryStatusWindow(1, 1)
+        drawResourceWindow(26, 1)
 
     #myscreen.vline(20, 35, curses.ACS_CKBOARD, 4)
     #drawVGauge("Test Gauge", 42, 1, 35)
