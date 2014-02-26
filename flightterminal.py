@@ -7,6 +7,7 @@
 import math
 import time
 import curses
+import copy
 import telemachus_plugin as tele
 import config
 
@@ -32,35 +33,132 @@ except:
     print 'Unable to connect to arduino at ' + config.arduinoSerialPort()
 
 
-def getFlightData(d):
-    d['MET'] = float(tele.read_missiontime())
-    d['ASL'] = int(tele.read_asl())
-    d['Ap'] = int(tele.read_apoapsis())
-    d['Pe'] = int(tele.read_periapsis())
-    d['Time to Ap'] = float(tele.read_time_to_ap())
-    d['Time to Pe'] = float(tele.read_time_to_pe())
-    d['Eccentricity'] = float(tele.read_eccentricity())
-    d['Inclination'] = float(tele.read_inclination())
-    time.sleep(0.01)
-    d['Orbital Period'] = float(tele.read_orbitalperiod())
-    d['Vertical Speed'] = float(tele.read_verticalspeed())
+def getFlightData(dIN):
+    # Try to update the dictionary with live data. If any of it fails for any
+    # reason, return the original dictionary and set the 'Radio Contact' key
+    # to false.
+    d = {'Zero': 0}
+    try:
+        d['MET'] = float(tele.read_missiontime())
+        d['ASL'] = int(tele.read_asl())
+        d['Ap'] = int(tele.read_apoapsis())
+        d['Pe'] = int(tele.read_periapsis())
+        d['Time to Ap'] = float(tele.read_time_to_ap())
+        d['Time to Pe'] = float(tele.read_time_to_pe())
+        d['Eccentricity'] = float(tele.read_eccentricity())
+        d['Inclination'] = float(tele.read_inclination())
+        d['Orbital Period'] = float(tele.read_orbitalperiod())
+        d['Vertical Speed'] = float(tele.read_verticalspeed())
 
-    d['SAS Status'] = int(tele.sas(2))
-    d['RCS Status'] = int(tele.rcs(2))
-    d['Light Status'] = int(tele.light(2))
+        d['SAS Status'] = int(tele.sas(2))
+        d['RCS Status'] = int(tele.rcs(2))
+        d['Light Status'] = int(tele.light(2))
 
-    d['ElectricCharge'] = float(tele.read_resource('ElectricCharge'))
-    d['Max ElectricCharge'] = float(tele.read_resource_max('ElectricCharge'))
-    time.sleep(0.01)
-    d['LiquidFuel'] = float(tele.read_resource('LiquidFuel'))
-    d['Max LiquidFuel'] = float(tele.read_resource_max('LiquidFuel'))
-    d['Oxidizer'] = float(tele.read_resource('Oxidizer'))
-    d['MaxOxidizer'] = float(tele.read_resource_max('Oxidizer'))
-    d['SolidFuel'] = float(tele.read_resource('SolidFuel'))
-    d['Max SolidFuel'] = float(tele.read_resource_max('SolidFuel'))
-    # I need to add handling for losing contact with the server. It's good
-    # practice plus should help with the HTTP 500 errors
-    return d
+        d['ElectricCharge'] = float(tele.read_resource('ElectricCharge'))
+        d['Max ElectricCharge'] = float(tele.read_resource_max(
+            'ElectricCharge'))
+        d['LiquidFuel'] = float(tele.read_resource('LiquidFuel'))
+        d['Max LiquidFuel'] = float(tele.read_resource_max('LiquidFuel'))
+        d['Oxidizer'] = float(tele.read_resource('Oxidizer'))
+        d['MaxOxidizer'] = float(tele.read_resource_max('Oxidizer'))
+        d['SolidFuel'] = float(tele.read_resource('SolidFuel'))
+        d['Max SolidFuel'] = float(tele.read_resource_max('SolidFuel'))
+
+        d['Previous Radio Contact'] = dIN['Radio Contact']
+        d['Radio Contact'] = True
+        return d
+
+    except:
+        dIN['Previous Radio Contact'] = dIN['Radio Contact']
+        dIN['Radio Contact'] = False
+        del d
+        return dIN
+
+
+def drawStatusWindow():
+    global yLine
+    myscreen.addstr(yLine, 1, "##     Mission Time:     ##", curses.A_STANDOUT)
+    yLine += 1
+    myscreen.addstr(yLine, 4, str(round(fd['MET'], 1))
+        .zfill(21), curses.color_pair(1))
+    yLine += 1
+    yLine += 1
+
+    myscreen.addstr(yLine, 1, "ASL:")
+    myscreen.addstr(yLine, 20, str(fd['ASL'])
+        .zfill(filldigits))
+    yLine += 1
+    yLine += 1
+
+    myscreen.addstr(yLine, 1, "##  Orbital Information  ##", curses.A_STANDOUT)
+    yLine += 1
+    myscreen.addstr(yLine, 1, "Apoapsis:")
+    myscreen.addstr(yLine, 20, str(fd['Ap'])
+        .zfill(filldigits))
+    yLine += 1
+    myscreen.addstr(yLine, 1, "Periapsis:")
+    myscreen.addstr(yLine, 20, str(fd['Pe'])
+        .zfill(filldigits))
+    yLine += 1
+    myscreen.addstr(yLine, 1, "Eccentricity:")
+    myscreen.addstr(yLine, 20, str(round(fd['Eccentricity'], 6))
+        .zfill(filldigits))
+    yLine += 1
+    myscreen.addstr(yLine, 1, "Inclination:")
+    myscreen.addstr(yLine, 20, str(round(fd['Inclination'], 6))
+        .zfill(filldigits))
+    yLine += 1
+    myscreen.addstr(yLine, 1, "Orbital Period:")
+    myscreen.addstr(yLine, 20, str(round(fd['Orbital Period'], 1))
+        .zfill(filldigits))
+    yLine += 1
+    myscreen.addstr(yLine, 1, "Time to Ap:")
+    myscreen.addstr(yLine, 20, str(round(fd['Time to Ap'], 1))
+        .zfill(filldigits))
+    yLine += 1
+    myscreen.addstr(yLine, 1, "Time to Pe:")
+    myscreen.addstr(yLine, 20, str(round(fd['Time to Pe'], 1))
+        .zfill(filldigits))
+    yLine += 1
+    yLine += 1
+
+    myscreen.addstr(yLine, 1, "##  Flight Configuration  ##",
+         curses.A_STANDOUT)
+    yLine += 1
+    myscreen.addstr(yLine, 1, "SAS Status:")
+    myscreen.addstr(yLine, 20, str(fd['SAS Status']))
+    yLine += 1
+    myscreen.addstr(yLine, 1, "RCS Status:")
+    myscreen.addstr(yLine, 20, str(fd['RCS Status']))
+    yLine += 1
+    myscreen.addstr(yLine, 1, "Ext. Light Status:")
+    myscreen.addstr(yLine, 20, str(fd['Light Status']))
+    yLine += 1
+    yLine += 1
+
+    myscreen.addstr(yLine, 1, "##       Resources        ##",
+        curses.A_STANDOUT)
+    yLine += 1
+    myscreen.addstr(yLine, 1, "Electric Charge:")
+    myscreen.addstr(yLine, 20, str(int(fd['ElectricCharge']))
+        .zfill(filldigits))
+    yLine += 1
+    myscreen.addstr(yLine, 1, "Liquid Fuel:")
+    myscreen.addstr(yLine, 20, str(int(fd['LiquidFuel']))
+        .zfill(filldigits))
+    yLine += 1
+    myscreen.addstr(yLine, 1, "Oxidizer:")
+    myscreen.addstr(yLine, 20, str(int(fd['Oxidizer']))
+        .zfill(filldigits))
+    yLine += 1
+    myscreen.addstr(yLine, 1, "Solid Fuel:")
+    cSolidFuel = int(fd['SolidFuel'])
+    if cSolidFuel < 0:
+        myscreen.addstr(yLine, 20, "# None #", curses.color_pair(3))
+    else:
+        myscreen.addstr(yLine, 20, str(cSolidFuel).zfill(filldigits))
+    yLine += 1
+    yLine += 1
 
 
 def formatRCC(inputln):  # Formating Reading Color Critical
@@ -74,10 +172,11 @@ def formatRCC(inputln):  # Formating Reading Color Critical
 def drawVGauge(gLabel, percentVal, yCord, xCord):
     # Draws a gauge from 0-100% that is 30 rows x 15 Coll with the top left
     # corner at (yCord, xCord)
-    percentVal = round(percentVal,1)
+    percentVal = round(percentVal, 1)
     if percentVal > 100:
-        percentVal == int(100)
+        percentVal = int(100)
     gauge = myscreen.subwin(25, 15, yCord, xCord)
+    gauge.clear()
     gauge.border()
     gauge.addstr(0, 7 - len(gLabel) / 2, gLabel)
     barHeight = min(20, int(percentVal / 5))
@@ -101,8 +200,8 @@ def drawVGauge(gLabel, percentVal, yCord, xCord):
                     barHeight - 10)
                 gauge.attroff(curses.color_pair(1))
         gauge.addstr(23, 5, str(percentVal).zfill(3) + '%')
-    elif percentVal < 0.1:
-        gauge.addstr(23, 6, 'Empty')
+    elif percentVal < 1:
+        gauge.addstr(23, 5, 'Empty')
 
 
 ###  Arduino Utilities
@@ -199,7 +298,29 @@ filldigits = 8
 arduinoActive = 0
 
 # Flight Data Memory and other variables
-fd = {'zero': 0}  # Primary data storage
+fd = {  # Primary data storage
+'MET': -1, 'ASL': -1, 'Ap': -1, 'Pe': -1, 'Time to Ap': -1, 'Time to Pe': -1,
+'Eccentricity': -1, 'Inclination': -1, 'Orbital Period': -1,
+'Vertical Speed': -1, 'SAS Status': -1, 'RCS Status': -1, 'Light Status': -1,
+'ElectricCharge': -1, 'Max ElectricCharge': -1, 'LiquidFuel': -1,
+'Max LiquidFuel': -1, 'Oxidizer': -1, 'MaxOxidizer': -1, 'SolidFuel': -1,
+'Max SolidFuel': -1, 'Radio Contact': False, 'Previous Radio Contact': False}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 arduinoSleepMarker = 0
 buttonSleepMarker = 0
 gearStatus = 0
@@ -207,11 +328,13 @@ brakeStatus = 0
 memB = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # Current serial input
 memBOLD = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # Old serial input
 n = 0
+maxY, maxX = myscreen.getmaxyx()
 
 ### Flight Computer Section ##################################################
 while chrin != 48:
     loopStartTime = time.time()
-    myscreen.clear()
+    if (maxY, maxX) != myscreen.getmaxyx():
+        myscreen.clear()
     fd = getFlightData(fd)
     myscreen.border()
     maxY, maxX = myscreen.getmaxyx()
@@ -219,88 +342,17 @@ while chrin != 48:
     myscreen.nodelay(1)
     myscreen.addstr(0, maxX / 2 - 12, "Persigehl Flight Terminal")
     #
-    myscreen.addstr(yLine, 1, "##     Mission Time:     ##", curses.A_STANDOUT)
-    yLine += 1
-    myscreen.addstr(yLine, 4, str(round(fd['MET'], 1))
-        .zfill(21), curses.color_pair(1))
-    yLine += 1
-    yLine += 1
 
-    myscreen.addstr(yLine, 1, "ASL:")
-    myscreen.addstr(yLine, 20, str(fd['ASL'])
-        .zfill(filldigits))
-    yLine += 1
-    yLine += 1
-
-    myscreen.addstr(yLine, 1, "##  Orbital Information  ##", curses.A_STANDOUT)
-    yLine += 1
-    myscreen.addstr(yLine, 1, "Apoapsis:")
-    myscreen.addstr(yLine, 20, str(fd['Ap'])
-        .zfill(filldigits))
-    yLine += 1
-    myscreen.addstr(yLine, 1, "Periapsis:")
-    myscreen.addstr(yLine, 20, str(fd['Pe'])
-        .zfill(filldigits))
-    yLine += 1
-    myscreen.addstr(yLine, 1, "Eccentricity:")
-    myscreen.addstr(yLine, 20, str(round(fd['Eccentricity'], 6))
-        .zfill(filldigits))
-    yLine += 1
-    myscreen.addstr(yLine, 1, "Inclination:")
-    myscreen.addstr(yLine, 20, str(round(fd['Inclination'], 6))
-        .zfill(filldigits))
-    yLine += 1
-    myscreen.addstr(yLine, 1, "Orbital Period:")
-    myscreen.addstr(yLine, 20, str(round(fd['Orbital Period'], 1))
-        .zfill(filldigits))
-    yLine += 1
-    myscreen.addstr(yLine, 1, "Time to Ap:")
-    myscreen.addstr(yLine, 20, str(round(fd['Time to Ap'], 1))
-        .zfill(filldigits))
-    yLine += 1
-    myscreen.addstr(yLine, 1, "Time to Pe:")
-    myscreen.addstr(yLine, 20, str(round(fd['Time to Pe'], 1))
-        .zfill(filldigits))
-    yLine += 1
-    yLine += 1
-
-    myscreen.addstr(yLine, 1, "##  Flight Configuration  ##",
-         curses.A_STANDOUT)
-    yLine += 1
-    myscreen.addstr(yLine, 1, "SAS Status:")
-    myscreen.addstr(yLine, 20, str(fd['SAS Status']))
-    yLine += 1
-    myscreen.addstr(yLine, 1, "RCS Status:")
-    myscreen.addstr(yLine, 20, str(fd['RCS Status']))
-    yLine += 1
-    myscreen.addstr(yLine, 1, "Ext. Light Status:")
-    myscreen.addstr(yLine, 20, str(fd['Light Status']))
-    yLine += 1
-    yLine += 1
-
-    myscreen.addstr(yLine, 1, "##       Resources        ##",
-        curses.A_STANDOUT)
-    yLine += 1
-    myscreen.addstr(yLine, 1, "Electric Charge:")
-    myscreen.addstr(yLine, 20, str(int(fd['ElectricCharge']))
-        .zfill(filldigits))
-    yLine += 1
-    myscreen.addstr(yLine, 1, "Liquid Fuel:")
-    myscreen.addstr(yLine, 20, str(int(fd['LiquidFuel']))
-        .zfill(filldigits))
-    yLine += 1
-    myscreen.addstr(yLine, 1, "Oxidizer:")
-    myscreen.addstr(yLine, 20, str(int(fd['Oxidizer']))
-        .zfill(filldigits))
-    yLine += 1
-    myscreen.addstr(yLine, 1, "Solid Fuel:")
-    cSolidFuel = int(fd['SolidFuel'])
-    if cSolidFuel < 0:
-        myscreen.addstr(yLine, 19, "# Empty #", curses.color_pair(3))
-    else:
-        myscreen.addstr(yLine, 20, str(cSolidFuel).zfill(filldigits))
-    yLine += 1
-    yLine += 1
+    #if fd['Radio Contact'] is True:
+    if fd['Radio Contact'] is True and fd['Previous Radio Contact'] is True:
+        drawStatusWindow()
+    elif fd['Radio Contact'] is False:
+        myscreen.addstr(max(yLine, 27), maxX / 2 - 12,
+            "### Radio Contact Lost ###", curses.A_STANDOUT)
+    elif fd['Radio Contact'] is True and fd['Previous Radio Contact'] is False:
+        myscreen.clear()
+        myscreen.border()
+        drawStatusWindow()
 
     #myscreen.vline(20, 35, curses.ACS_CKBOARD, 4)
     #drawVGauge("Test Gauge", 42, 1, 35)
@@ -332,12 +384,12 @@ while chrin != 48:
 
 
     if arduinoActive == 1:
-        climbgauge = tele.read_verticalspeed()
+        climbgauge = int(fd['Vertical Speed'])
         if climbgauge > 0:
-            climbgauge = clamp((int(4 * math.sqrt(climbgauge)) + 127), 0, 2255)
+            climbgauge = clamp((int(4 * math.sqrt(climbgauge)) + 127), 0, 254)
         elif climbgauge < 0:
             climbgauge = clamp((0 - int(4 * math.sqrt(
-                abs(climbgauge))) + 127), 0, 255)
+                abs(climbgauge))) + 127), 0, 254)
         else:
             climbgauge = 127  # Neutral
 
@@ -348,8 +400,6 @@ while chrin != 48:
             + str(int(round(fd['Vertical Speed']))).zfill(8)
             + chr(climbgauge) + 'BCDEFGH'
             )
-
-        #arduinostring = [255, 255, 255]
 
         if arduinoSleepMarker > 0.2:
             try:
