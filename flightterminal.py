@@ -217,6 +217,8 @@ def push_to_arduino(inputline):
 
 
 def buttonHandler():
+    # Reads memB for which buttons are pressed, then sends
+    # calls to telemachus as needed.
     global gearStatus
     global brakeStatus
     global memB
@@ -306,21 +308,6 @@ fd = {  # Primary data storage
 'Max LiquidFuel': -1, 'Oxidizer': -1, 'MaxOxidizer': -1, 'SolidFuel': -1,
 'Max SolidFuel': -1, 'Radio Contact': False, 'Previous Radio Contact': False}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 arduinoSleepMarker = 0
 buttonSleepMarker = 0
 gearStatus = 0
@@ -329,6 +316,7 @@ memB = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # Current serial input
 memBOLD = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # Old serial input
 n = 0
 maxY, maxX = myscreen.getmaxyx()
+
 
 ### Flight Computer Section ##################################################
 while chrin != 48:
@@ -357,15 +345,15 @@ while chrin != 48:
     #myscreen.vline(20, 35, curses.ACS_CKBOARD, 4)
     #drawVGauge("Test Gauge", 42, 1, 35)
     drawVGauge("Electricity", fd['ElectricCharge'] /
-        fd['Max ElectricCharge'] * 100, 1, 35)
+        fd['Max ElectricCharge'] * 100, 1, 31)
     drawVGauge("Liquid Fuel", (fd['LiquidFuel'] /
-        fd['Max LiquidFuel']) * 100, 1, 50)
+        fd['Max LiquidFuel']) * 100, 1, 46)
 
     if fd['SolidFuel'] != -1:
         drawVGauge("Solid Fuel", (fd['SolidFuel'] /
-            fd['Max SolidFuel']) * 100, 1, 65)
+            fd['Max SolidFuel']) * 100, 1, 61)
     else:
-        drawVGauge("Solid Fuel", 0, 1, 65)
+        drawVGauge("Solid Fuel", 0, 1, 61)
 
 ### Arduino Section ##########################################################
     if arduinoConnected is True:
@@ -381,7 +369,6 @@ while chrin != 48:
             myscreen.addstr(maxY - 1, 2, " Press 1 to Deactivate Arduino ")
     else:
         myscreen.addstr(maxY - 1, 2, " Arduino not available ")
-
 
     if arduinoActive == 1:
         climbgauge = int(fd['Vertical Speed'])
@@ -423,8 +410,7 @@ while chrin != 48:
                         ser.flushInput()
 
         if buttonSleepMarker > 0.1:
-            buttonHandler()  # Reads memB for which buttons are pressed, then sends
-                             # calls to telemachus as needed.
+            buttonHandler()
             button_sleep_marker = 0
             memBOLD = list(memB)
 
@@ -441,13 +427,6 @@ while chrin != 48:
         myscreen.addstr(yLine, 20, str(round(loopTime, 5)))
         yLine += 1
         yLine += 1
-
-
-
-
-
-
-
 
 ### Main Loop Cleanup ########################################################
     myscreen.addstr(maxY - 1, maxX - 19, " Press 0 to Exit ")
