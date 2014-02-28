@@ -27,7 +27,7 @@ try:
         port=config.arduinoSerialPort(),
         #port='COM3',
         #baudrate=115200, # Causes the arduino buffer to fill up
-        baudrate=9600, # Seems to be working well
+        baudrate=9600,  # Seems to be working well
        # parity=serial.PARITY_ODD,
        # stopbits=serial.STOPBITS_TWO,
        # bytesize=serial.SEVENBITS
@@ -180,18 +180,20 @@ def drawResourceWindow(yCord, xCord):
     return yL
 
 
-
 def drawArduinoWindow(yCord, xCord):
     arduinoW = myscreen.subwin(10, 60, yCord, xCord)
     arduinoW.border()
     yL = 0  # local variable for the Y line
-    #xL = 0  # local variable for the X line
+    #fNorm = curses.A_NORMAL  # Formatting for unselected options
     arduinoW.addstr(yL, 30 - 12, "##  Arduino Readouts  ##",
         curses.A_STANDOUT)
     yL += 1
     arduinoW.addstr(yL, 1, "Serial Out:")
     yL += 1
-    arduinoW.addstr(yL, 1, str(memA))
+    try:
+        arduinoW.addstr(yL, 1, str(memA))
+    except:
+        arduinoW.addstr(yL, 1, 'Memory contains bytes that can not be printed')
     yL += 1
     yL += 1
     arduinoW.addstr(yL, 1, "Serial In:")
@@ -204,6 +206,80 @@ def drawArduinoWindow(yCord, xCord):
     yL += 1
     arduinoW.addstr(yL, 1, str(round(loopTime, 5)))
     yL += 1
+
+
+def drawMainMenu(yCord, xCord):
+    menuDepth = 10
+    mainMenu = myscreen.subwin(menuDepth, 25, yCord, xCord)
+    mainMenu.clear()
+    mainMenu.attron(curses.color_pair(3))
+    mainMenu.border()
+    mainMenu.attroff(curses.color_pair(3))
+    #mainMenu.bkgd(32, curses.color_pair(2))  #Fill the background with spaces
+    yL = 1  # local variable for the Y line
+    FSO = curses.A_STANDOUT  # Formatting for selected option
+
+    mainMenu.addstr(0, 12 - 5, " Main Menu ",
+        curses.A_BOLD)
+
+    if arduinoConnected is True:
+        if ps['Main Menu Selection'] == yL and ps['Arduino Active'] is False:
+            mainMenu.addstr(yL, 1, str(yL) + ":Activate Arduino", FSO)
+            if chrin == ord('\n'):
+                ps['Arduino Active'] = True
+        elif ps['Main Menu Selection'] != yL and ps['Arduino Active'] is False:
+            mainMenu.addstr(yL, 1, str(yL) + ":Activate Arduino")
+        elif ps['Main Menu Selection'] == yL and ps['Arduino Active'] is True:
+            mainMenu.addstr(yL, 1, str(yL) + ":Deactivate Arduino", FSO)
+            if chrin == ord('\n'):
+                ps['Arduino Active'] = False
+        elif ps['Main Menu Selection'] != yL and ps['Arduino Active'] is True:
+            mainMenu.addstr(yL, 1, str(yL) + ":Deactivate Arduino")
+        else:
+            pass
+    elif arduinoConnected is False:
+        if ps['Main Menu Selection'] == yL:
+            mainMenu.addstr(yL, 1, str(yL) + ":Arduino not available", FSO)
+        else:
+            mainMenu.addstr(yL, 1, str(yL) + ":Arduino not available")
+
+    yL += 1
+
+    if ps['Main Menu Selection'] == yL:
+            mainMenu.addstr(yL, 1, str(yL) + ":Force Screen Redraw", FSO)
+    else:
+            mainMenu.addstr(yL, 1, str(yL) + ":Force Screen Redraw")
+    yL += 1
+
+    if ps['Main Menu Selection'] == yL:  # Exit doesn't actually work yet
+            mainMenu.addstr(yL, 1, str(yL) + ":Exit", FSO)
+    else:
+            mainMenu.addstr(yL, 1, str(yL) + ":Exit")
+
+    mainMenu.addstr(menuDepth - 3, 1, "Program Loop Time:")
+    mainMenu.addstr(menuDepth - 2, 1, str(round(loopTime, 5)))
+    #### Keyboard input for moving the hightlight ###
+    if chrin == ord('1'):
+        ps['Main Menu Selection'] = 1
+    elif chrin == ord('2'):
+        ps['Main Menu Selection'] = 2
+    elif chrin == ord('3'):
+        ps['Main Menu Selection'] = 3
+
+    elif chrin == 258:
+        if ps['Main Menu Selection'] < yL:
+            ps['Main Menu Selection'] += 1
+        else:
+            ps['Main Menu Selection'] = 1
+    elif chrin == 259:
+        if ps['Main Menu Selection'] > 1:
+            ps['Main Menu Selection'] -= 1
+        else:
+            ps['Main Menu Selection'] = yL
+    if chrin == ord('\n'):
+        ps['Main Menu is Open'] = False
+        ps['Slection Made'] = True
+        mainMenu.clear()
 
 
 def formatRCC(inputln):  # Formating Reading Color Critical
@@ -340,6 +416,7 @@ myscreen.keypad(1)
 chrin = -1
 filldigits = 8
 arduinoActive = 0
+menuOpen = 0
 
 # Flight Data Memory and other variables
 fd = {  # Primary data storage
@@ -350,6 +427,12 @@ fd = {  # Primary data storage
 'Max LiquidFuel': -1, 'Oxidizer': -1, 'MaxOxidizer': -1, 'SolidFuel': -1,
 'Max SolidFuel': -1, 'Radio Contact': False, 'Previous Radio Contact': False}
 
+ps = {  # Program Settings
+'Main Menu is Open': False, 'Main Menu Selection': 1, 'Slection Made': False,
+'Terminal Max Y': 25, 'Terminal Max X': 40,
+'Arduino Sleep Marker': 0, 'Arduino Active': False, 'Button Sleep Marker': 0,
+'flightData Sleep Marker': 0, 'Gear Status': 0, 'Brake Status': 0}
+
 arduinoSleepMarker = 0
 buttonSleepMarker = 0
 flightDataSleepMarker = 0
@@ -358,28 +441,29 @@ brakeStatus = 0
 memB = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # Current serial input
 memBOLD = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # Old serial input
 n = 0
-maxY, maxX = myscreen.getmaxyx()
+ps['Terminal Max Y'], ps['Terminal Max X'] = myscreen.getmaxyx()
 
+print ps['Terminal Max Y']
+print ps['Terminal Max X']
 
 ### Flight Computer Section ##################################################
 while chrin != 48:
     loopStartTime = time.time()
-    if (maxY, maxX) != myscreen.getmaxyx():
+    if (ps['Terminal Max Y'], ps['Terminal Max X']) != myscreen.getmaxyx():
         myscreen.clear()
     if flightDataSleepMarker > config.pollInterval():
         fd = getFlightData(fd)
     myscreen.border()
-    maxY, maxX = myscreen.getmaxyx()
+    ps['Terminal Max Y'], ps['Terminal Max X'] = myscreen.getmaxyx()
     yLine = 2  # Starting Row for flight info
     myscreen.nodelay(1)
-    myscreen.addstr(0, maxX / 2 - 12, "Persigehl Flight Terminal")
-    #
+    myscreen.addstr(0, ps['Terminal Max X'] / 2 - 12, "Persigehl Flight Terminal")
 
     if fd['Radio Contact'] is True and fd['Previous Radio Contact'] is True:
         drawPrimaryStatusWindow(1, 1)
         drawResourceWindow(26, 1)
     elif fd['Radio Contact'] is False:
-        myscreen.addstr(max(yLine, 27), maxX / 2 - 12,
+        myscreen.addstr(ps['Terminal Max Y'] - 2, ps['Terminal Max X'] / 2 - 12,
             "### Radio Contact Lost ###", curses.A_STANDOUT)
     elif fd['Radio Contact'] is True and fd['Previous Radio Contact'] is False:
         myscreen.clear()
@@ -401,21 +485,8 @@ while chrin != 48:
         drawVGauge("Solid Fuel", 0, 1, 61)
 
 ### Arduino Section ##########################################################
-    if arduinoConnected is True:
-        if chrin == 49:  # If user presses '1', toggle arduino bit
-            if arduinoActive == 0:
-                arduinoActive = 1
-            elif arduinoActive == 1:
-                arduinoActive = 0
 
-        if arduinoActive == 0:
-            myscreen.addstr(maxY - 1, 2, " Press 1 to Activate Arduino ")
-        elif arduinoActive == 1:
-            myscreen.addstr(maxY - 1, 2, " Press 1 to Deactivate Arduino ")
-    else:
-        myscreen.addstr(maxY - 1, 2, " Arduino not available ")
-
-    if arduinoActive == 1:
+    if ps['Arduino Active'] is True:
         climbgauge = int(fd['Vertical Speed'])
         if climbgauge > 0:
             climbgauge = clamp((int(4 * math.sqrt(climbgauge)) + 127), 0, 254)
@@ -461,8 +532,14 @@ while chrin != 48:
 
         drawArduinoWindow(26, 31)
 
+    if chrin == 49:  # Display the pop up menu
+        ps['Main Menu is Open'] = True
+
+    if ps['Main Menu is Open'] is True:
+        drawMainMenu(1, ps['Terminal Max X'] - 26)
+
 ### Main Loop Cleanup ########################################################
-    myscreen.addstr(maxY - 1, maxX - 19, " Press 0 to Exit ")
+    myscreen.addstr(ps['Terminal Max Y'] - 1, ps['Terminal Max X'] - 19, " Press 0 to Exit ")
     myscreen.refresh()
     chrin = myscreen.getch()
 
@@ -487,4 +564,5 @@ curses.echo()
 curses.endwin()
 print 'FlightTerminal ended by user'
 print 'Screen dimensions on close were:'
-print 'Y: ' + str(maxY) + " " + 'X: ' + str(maxX)
+print ('Y: ' + str(ps['Terminal Max Y']) + " " + 'X: ' +
+    str(ps['Terminal Max X']))
