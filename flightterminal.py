@@ -227,6 +227,7 @@ def drawMainMenu(yCord, xCord):
             mainMenu.addstr(yL, 1, str(yL) + ":Activate Arduino", FSO)
             if chrin == ord('\n'):
                 ps['Arduino Active'] = True
+                ps['Arduino Active'] = True
         elif ps['Main Menu Selection'] != yL and ps['Arduino Active'] is False:
             mainMenu.addstr(yL, 1, str(yL) + ":Activate Arduino")
         elif ps['Main Menu Selection'] == yL and ps['Arduino Active'] is True:
@@ -238,26 +239,34 @@ def drawMainMenu(yCord, xCord):
         else:
             pass
     elif arduinoConnected is False:
+        mainMenu.attron(curses.color_pair(2))
         if ps['Main Menu Selection'] == yL:
             mainMenu.addstr(yL, 1, str(yL) + ":Arduino not available", FSO)
         else:
             mainMenu.addstr(yL, 1, str(yL) + ":Arduino not available")
+        mainMenu.attroff(curses.color_pair(2))
 
     yL += 1
 
     if ps['Main Menu Selection'] == yL:
             mainMenu.addstr(yL, 1, str(yL) + ":Force Screen Redraw", FSO)
+            if chrin == ord('\n'):
+                myscreen.clear()
     else:
             mainMenu.addstr(yL, 1, str(yL) + ":Force Screen Redraw")
     yL += 1
 
     if ps['Main Menu Selection'] == yL:  # Exit doesn't actually work yet
             mainMenu.addstr(yL, 1, str(yL) + ":Exit", FSO)
+            if chrin == ord('\n'):
+                pass
     else:
             mainMenu.addstr(yL, 1, str(yL) + ":Exit")
 
+    mainMenu.addstr(menuDepth - 4, 2, "Press Enter to Select")
     mainMenu.addstr(menuDepth - 3, 1, "Program Loop Time:")
     mainMenu.addstr(menuDepth - 2, 1, str(round(loopTime, 5)))
+
     #### Keyboard input for moving the hightlight ###
     if chrin == ord('1'):
         ps['Main Menu Selection'] = 1
@@ -276,9 +285,17 @@ def drawMainMenu(yCord, xCord):
             ps['Main Menu Selection'] -= 1
         else:
             ps['Main Menu Selection'] = yL
-    if chrin == ord('\n'):
+    elif chrin == ord('\n'):
         ps['Main Menu is Open'] = False
         ps['Slection Made'] = True
+        mainMenu.clear()
+    elif chrin == 27:
+        ps['Main Menu is Open'] = False
+        ps['Slection Made'] = False
+        mainMenu.clear()
+    elif chrin == 96:
+        ps['Main Menu is Open'] = False
+        ps['Slection Made'] = False
         mainMenu.clear()
 
 
@@ -532,13 +549,16 @@ while chrin != 48:
 
         drawArduinoWindow(26, 31)
 
-    if chrin == 49:  # Display the pop up menu
+    if chrin == 96 and ps['Main Menu is Open'] is False:
+    # Display the pop up menu if '`' is pressed (the key to the left of 1)
         ps['Main Menu is Open'] = True
+        chrin = 0
 
     if ps['Main Menu is Open'] is True:
         drawMainMenu(1, ps['Terminal Max X'] - 26)
 
 ### Main Loop Cleanup ########################################################
+    myscreen.addstr(ps['Terminal Max Y'] - 1, 2, " Press ` to toggle Main Menu ")
     myscreen.addstr(ps['Terminal Max Y'] - 1, ps['Terminal Max X'] - 19, " Press 0 to Exit ")
     myscreen.refresh()
     chrin = myscreen.getch()
