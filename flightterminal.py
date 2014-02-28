@@ -47,6 +47,7 @@ def getFlightData(dIN):
     try:
         d['MET'] = float(tele.read_missiontime())
         d['ASL'] = int(tele.read_asl())
+        d['Body'] = str(tele.read_body())
         d['Ap'] = int(tele.read_apoapsis())
         d['Pe'] = int(tele.read_periapsis())
         d['Time to Ap'] = float(tele.read_time_to_ap())
@@ -93,6 +94,9 @@ def drawPrimaryStatusWindow(yCord, xCord):
     yL += 1
     yL += 1
 
+    primaryStatusW.addstr(yL, 1, "Body: ")
+    primaryStatusW.addstr(yL, 20, str(fd['Body']).rjust(8))
+    yL += 1
     primaryStatusW.addstr(yL, 1, "ASL:")
     primaryStatusW.addstr(yL, 20, str(fd['ASL'])
         .zfill(filldigits))
@@ -146,8 +150,6 @@ def drawPrimaryStatusWindow(yCord, xCord):
     return yL
 
 
-
-
 def drawResourceWindow(yCord, xCord):
     resourceW = myscreen.subwin(10, 30, yCord, xCord)
     resourceW.border()
@@ -176,6 +178,32 @@ def drawResourceWindow(yCord, xCord):
         resourceW.addstr(yL, 20, str(cSolidFuel).zfill(filldigits))
     yL += 1
     return yL
+
+
+
+def drawArduinoWindow(yCord, xCord):
+    arduinoW = myscreen.subwin(10, 60, yCord, xCord)
+    arduinoW.border()
+    yL = 0  # local variable for the Y line
+    #xL = 0  # local variable for the X line
+    arduinoW.addstr(yL, 30 - 12, "##  Arduino Readouts  ##",
+        curses.A_STANDOUT)
+    yL += 1
+    arduinoW.addstr(yL, 1, "Serial Out:")
+    yL += 1
+    arduinoW.addstr(yL, 1, str(memA))
+    yL += 1
+    yL += 1
+    arduinoW.addstr(yL, 1, "Serial In:")
+    # arduinoW.addstr(yL, 10, str(int(str(memB))))
+    yL += 1
+    arduinoW.addstr(yL, 1, "".join([str(x) for x in memB]))
+    yL += 1
+    yL += 1
+    arduinoW.addstr(yL, 1, "Program Loop Time:")
+    yL += 1
+    arduinoW.addstr(yL, 1, str(round(loopTime, 5)))
+    yL += 1
 
 
 def formatRCC(inputln):  # Formating Reading Color Critical
@@ -324,6 +352,7 @@ fd = {  # Primary data storage
 
 arduinoSleepMarker = 0
 buttonSleepMarker = 0
+flightDataSleepMarker = 0
 gearStatus = 0
 brakeStatus = 0
 memB = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # Current serial input
@@ -337,7 +366,8 @@ while chrin != 48:
     loopStartTime = time.time()
     if (maxY, maxX) != myscreen.getmaxyx():
         myscreen.clear()
-    fd = getFlightData(fd)
+    if flightDataSleepMarker > config.pollInterval():
+        fd = getFlightData(fd)
     myscreen.border()
     maxY, maxX = myscreen.getmaxyx()
     yLine = 2  # Starting Row for flight info
@@ -345,7 +375,6 @@ while chrin != 48:
     myscreen.addstr(0, maxX / 2 - 12, "Persigehl Flight Terminal")
     #
 
-    #if fd['Radio Contact'] is True:
     if fd['Radio Contact'] is True and fd['Previous Radio Contact'] is True:
         drawPrimaryStatusWindow(1, 1)
         drawResourceWindow(26, 1)
@@ -404,7 +433,7 @@ while chrin != 48:
             + chr(climbgauge) + 'BCDEFGH'
             )
 
-        if arduinoSleepMarker > 0.2:
+        if arduinoSleepMarker > 0.25:
             try:
                 push_to_arduino(memA)
             finally:
@@ -430,26 +459,16 @@ while chrin != 48:
             button_sleep_marker = 0
             memBOLD = list(memB)
 
-        myscreen.addstr(yLine, 1, "##   Arduino Readouts    ##",
-         curses.A_STANDOUT)
-        yLine += 1
-        myscreen.addstr(yLine, 1, "memA:")
-        myscreen.addstr(yLine, 20, str(memA))
-        yLine += 1
-        myscreen.addstr(yLine, 1, "memB:")
-        myscreen.addstr(yLine, 20, str(memB))
-        yLine += 1
-        myscreen.addstr(yLine, 1, "Program Loop Time:")
-        myscreen.addstr(yLine, 20, str(round(loopTime, 5)))
-        yLine += 1
-        yLine += 1
+        drawArduinoWindow(26, 31)
 
 ### Main Loop Cleanup ########################################################
     myscreen.addstr(maxY - 1, maxX - 19, " Press 0 to Exit ")
     myscreen.refresh()
     chrin = myscreen.getch()
 
-    loopTimeOffset = 0.25 + loopStartTime - time.time()
+    loopTimeOffset = 0.0 + loopStartTime - time.time()
+        # This can be used to slow the entire program down to cycle at a
+        # given interval.
     if loopTimeOffset > 0:
         time.sleep(loopTimeOffset)
     # Combined Bandwidth used based on interval:
@@ -459,9 +478,13 @@ while chrin != 48:
     loopTime = loopEndTime - loopStartTime
     arduinoSleepMarker += loopTime
     buttonSleepMarker += loopTime
+    flightDataSleepMarker += loopTime
 
 
 curses.nocbreak()
 myscreen.keypad(0)
 curses.echo()
 curses.endwin()
+print 'FlightTerminal ended by user'
+print 'Screen dimensions on close were:'
+print 'Y: ' + str(maxY) + " " + 'X: ' + str(maxX)
