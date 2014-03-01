@@ -57,9 +57,9 @@ def getFlightData(dIN):
         d['Orbital Period'] = float(tele.read_orbitalperiod())
         d['Vertical Speed'] = float(tele.read_verticalspeed())
 
-        d['SAS Status'] = int(tele.sas(2))
-        d['RCS Status'] = int(tele.rcs(2))
-        d['Light Status'] = int(tele.light(2))
+        d['SAS Status'] = bool(tele.sas(2))
+        d['RCS Status'] = bool(tele.rcs(2))
+        d['Light Status'] = bool(tele.light(2))
 
         d['ElectricCharge'] = float(tele.read_resource('ElectricCharge'))
         d['Max ElectricCharge'] = float(tele.read_resource_max(
@@ -87,6 +87,11 @@ def drawPrimaryStatusWindow(yCord, xCord):
     primaryStatusW.border()
     yL = 0  # local variable for the Y line
     #xL = 0  # local variable for the X line
+    primaryStatusW.addstr(yL, 1, "##      Earth Time:       ##", curses.A_STANDOUT)
+    yL += 1
+    primaryStatusW.addstr(yL, 2, time.strftime("%a, %d %b %Y %H:%M:%S"), curses.color_pair(1))
+    yL += 1
+    yL += 1
     primaryStatusW.addstr(yL, 1, "##     Mission Time:      ##", curses.A_STANDOUT)
     yL += 1
     primaryStatusW.addstr(yL, 4, str(round(fd['MET'], 1))
@@ -139,13 +144,19 @@ def drawPrimaryStatusWindow(yCord, xCord):
          curses.A_STANDOUT)
     yL += 1
     primaryStatusW.addstr(yL, 1, "SAS Status:")
-    primaryStatusW.addstr(yL, 20, str(fd['SAS Status']))
+    primaryStatusW.addstr(yL, 20, str(fd['SAS Status']).ljust(5))
     yL += 1
     primaryStatusW.addstr(yL, 1, "RCS Status:")
-    primaryStatusW.addstr(yL, 20, str(fd['RCS Status']))
+    primaryStatusW.addstr(yL, 20, str(fd['RCS Status']).ljust(5))
     yL += 1
-    primaryStatusW.addstr(yL, 1, "Ext. Light Status:")
-    primaryStatusW.addstr(yL, 20, str(fd['Light Status']))
+    primaryStatusW.addstr(yL, 1, "Ext. Lights:")
+    primaryStatusW.addstr(yL, 20, str(fd['Light Status']).ljust(5))
+    yL += 1
+    primaryStatusW.addstr(yL, 1, "Landing Gear:")
+    primaryStatusW.addstr(yL, 20, str(ps['Gear Status']).ljust(5))
+    yL += 1
+    primaryStatusW.addstr(yL, 1, "Brake Status:")
+    primaryStatusW.addstr(yL, 20, str(ps['Brake Status']).ljust(5))
     yL += 1
     return yL
 
@@ -354,8 +365,6 @@ def push_to_arduino(inputline):
 def buttonHandler():
     # Reads memB for which buttons are pressed, then sends
     # calls to telemachus as needed.
-    global gearStatus
-    global brakeStatus
     global memB
     global memBOLD
     if memB[1] == '1' and memB[1] != memBOLD[1]:
@@ -368,41 +377,43 @@ def buttonHandler():
 
     if int(memB[2]) == 1 and memB[2] != memBOLD[2]:
         # Toggle gear based on what we did last time
-        if gearStatus == 1:  # Telemachus does not yet read gear status
+        if ps['Gear Status'] is True:
+            # Telemachus does not yet read gear status
             tele.gear(0)
-            gearStatus = 0
-        elif gearStatus == 0:
+            ps['Gear Status'] = False
+        elif ps['Gear Status'] is False:
             tele.gear(1)
-            gearStatus = 1
+            ps['Gear Status'] = True
 
     if int(memB[3]) == 1 and memB[3] != memBOLD[3]:
         # Toggle Light based on the Telemachus reading
-        if tele.light(2) == 1:
+        if fd['Light Status'] is True:
             tele.light(0)
-        elif tele.light(2) == 0:
+        elif fd['Light Status'] is False:
             tele.light(1)
 
     if int(memB[4]) == 1 and memB[4] != memBOLD[4]:
         # Toggle brake based on what we did last time
-        if brakeStatus == 1:  # Telemachus does not yet read brake status
+        if ps['Brake Status'] is True:
+            # Telemachus does not yet read brake status
             tele.brake(0)
-            brakeStatus = 0
-        elif brakeStatus == 0:
+            ps['Brake Status'] = False
+        elif ps['Brake Status'] is False:
             tele.brake(1)
-            brakeStatus = 1
+            ps['Brake Status'] = True
 
     if int(memB[5]) == 1 and memB[5] != memBOLD[5]:
         # Toggle RCS based on the Telemachus reading
-        if tele.rcs(2) == 1:
+        if fd['RCS Status'] is True:
             tele.rcs(0)
-        elif tele.rcs(2) == 0:
+        elif fd['RCS Status'] is False:
             tele.rcs(1)
 
     if int(memB[6]) == 1 and memB[6] != memBOLD[6]:
         # Toggle SAS based on the Telemachus reading
-        if tele.sas(2) == 1:
+        if fd['SAS Status'] is True:
             tele.sas(0)
-        elif tele.sas(2) == 0:
+        elif fd['SAS Status'] is False:
             tele.sas(1)
 
 
@@ -448,13 +459,11 @@ ps = {  # Program Settings
 'Main Menu is Open': False, 'Main Menu Selection': 1, 'Slection Made': False,
 'Terminal Max Y': 25, 'Terminal Max X': 40,
 'Arduino Sleep Marker': 0, 'Arduino Active': False, 'Button Sleep Marker': 0,
-'flightData Sleep Marker': 0, 'Gear Status': 0, 'Brake Status': 0}
+'flightData Sleep Marker': 0, 'Gear Status': False, 'Brake Status': False}
 
 arduinoSleepMarker = 0
 buttonSleepMarker = 0
 flightDataSleepMarker = 0
-gearStatus = 0
-brakeStatus = 0
 memB = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # Current serial input
 memBOLD = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # Old serial input
 n = 0
@@ -468,8 +477,16 @@ while chrin != 48:
     loopStartTime = time.time()
     if (ps['Terminal Max Y'], ps['Terminal Max X']) != myscreen.getmaxyx():
         myscreen.clear()
-    if flightDataSleepMarker > config.pollInterval():
+    if flightDataSleepMarker > config.pollInterval() and (
+        fd['Radio Contact'] is True):
         fd = getFlightData(fd)
+    #### Expand this into an actual error handling bit.
+    # Do a single test once per second that only polls one item
+    # Alternativel, do actually multithreading w/ the URL stuff in the other
+    # thread. That makes far more sense.
+    elif flightDataSleepMarker > config.pollInterval() + 2:
+        fd = getFlightData(fd)
+
     myscreen.border()
     ps['Terminal Max Y'], ps['Terminal Max X'] = myscreen.getmaxyx()
     yLine = 2  # Starting Row for flight info
@@ -501,10 +518,20 @@ while chrin != 48:
     else:
         drawVGauge("Solid Fuel", 0, 1, 61)
 
+    drawVGauge("G-Force", fd['Vertical Speed'] / 100, 1, 76)
+    ''' No, the above unit does not make sense. I need to get it working so
+that I can take the derivative of speed to figure out what the actual gforce
+is. This will also need to be a seperate def with reversed colors'''
+
 ### Arduino Section ##########################################################
 
     if ps['Arduino Active'] is True:
         climbgauge = int(fd['Vertical Speed'])
+        '''This will need to be rewritten to only allow a subset of characters
+        so that it will no longer be possible to get header characters mixed
+        up in the trasmission (ie: '[' or ']') Perhaps limit the ranges to
+        only 128 bits, which is more than the gauges I have can really
+        support anyways.'''
         if climbgauge > 0:
             climbgauge = clamp((int(4 * math.sqrt(climbgauge)) + 127), 0, 254)
         elif climbgauge < 0:
@@ -563,9 +590,9 @@ while chrin != 48:
     myscreen.refresh()
     chrin = myscreen.getch()
 
-    loopTimeOffset = 0.0 + loopStartTime - time.time()
+    loopTimeOffset = 0.05 + loopStartTime - time.time()
         # This can be used to slow the entire program down to cycle at a
-        # given interval.
+        # given interval. This is a failsafe to prevent 100% utilization
     if loopTimeOffset > 0:
         time.sleep(loopTimeOffset)
     # Combined Bandwidth used based on interval:
