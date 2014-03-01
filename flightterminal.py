@@ -220,7 +220,7 @@ def drawArduinoWindow(yCord, xCord):
 
 
 def drawMainMenu(yCord, xCord):
-    menuDepth = 10
+    menuDepth = 15
     mainMenu = myscreen.subwin(menuDepth, 25, yCord, xCord)
     mainMenu.clear()
     mainMenu.attron(curses.color_pair(3))
@@ -257,16 +257,39 @@ def drawMainMenu(yCord, xCord):
             mainMenu.addstr(yL, 1, str(yL) + ":Arduino not available")
         mainMenu.attroff(curses.color_pair(2))
 
-    yL += 1
+    if ps['Arduino Active'] is True:
+        yL += 1
+        if ps['Main Menu Selection'] == yL:
+                mainMenu.addstr(yL, 1, str(yL) + ":Arduino - Flight Mode", FSO)
+                if chrin == ord('\n'):
+                    arduino['Display Mode'] = 'Flight Mode'
+        else:
+                mainMenu.addstr(yL, 1, str(yL) + ":Arduino - Flight Mode")
+        yL += 1
+        if ps['Main Menu Selection'] == yL:
+                mainMenu.addstr(yL, 1, str(yL) + ":Arduino - Clock Mode", FSO)
+                if chrin == ord('\n'):
+                    arduino['Display Mode'] = 'Clock'
+        else:
+                mainMenu.addstr(yL, 1, str(yL) + ":Arduino - Clock Mode")
+        yL += 1
+        if ps['Main Menu Selection'] == yL:
+                mainMenu.addstr(yL, 1, str(yL) + ":Arduino - Lamp Test", FSO)
+                if chrin == ord('\n'):
+                    arduino['Display Mode'] = 'Lamp Test'
+        else:
+                mainMenu.addstr(yL, 1, str(yL) + ":Arduino - Lamp Test")
+        yL += 1
 
+    yL += 1
     if ps['Main Menu Selection'] == yL:
             mainMenu.addstr(yL, 1, str(yL) + ":Force Screen Redraw", FSO)
             if chrin == ord('\n'):
                 myscreen.clear()
     else:
             mainMenu.addstr(yL, 1, str(yL) + ":Force Screen Redraw")
-    yL += 1
 
+    yL += 1
     if ps['Main Menu Selection'] == yL:  # Exit doesn't actually work yet
             mainMenu.addstr(yL, 1, str(yL) + ":Exit", FSO)
             if chrin == ord('\n'):
@@ -285,6 +308,12 @@ def drawMainMenu(yCord, xCord):
         ps['Main Menu Selection'] = 2
     elif chrin == ord('3'):
         ps['Main Menu Selection'] = 3
+    elif chrin == ord('4'):
+        ps['Main Menu Selection'] = 4
+    elif chrin == ord('5'):
+        ps['Main Menu Selection'] = 5
+    elif chrin == ord('6'):
+        ps['Main Menu Selection'] = 6
 
     elif chrin == 258:
         if ps['Main Menu Selection'] < yL:
@@ -360,6 +389,53 @@ def push_to_arduino(inputline):
     ser.write(inputline + '\n')
     #ser.write("255, 255, 255 \n")
     #time.sleep(.2)
+
+
+def formatForArduino(mode):
+
+    if mode == 'Lamp Test':  # Light Test
+        arduino['7r0 Data'] = '88888888'
+        arduino['7r1 Data'] = '88888888'
+        arduino['7r2 Data'] = '88888888'
+        arduino['7r3 Data'] = '88888888'
+        arduino['7r4 Data'] = '88888888'
+        arduino['g0 Data'] = chr(255)
+        arduino['g1 Data'] = chr(255)
+        arduino['g2 Data'] = chr(255)
+        arduino['g3 Data'] = chr(255)
+        arduino['g4 Data'] = chr(255)
+        arduino['g5 Data'] = chr(255)
+        arduino['g6 Data'] = chr(255)
+        arduino['g7 Data'] = chr(255)
+
+    elif mode == 'Clock':
+        arduino['7r0 Data'] = str(time.strftime("%H %M %S"))
+        arduino['7r1 Data'] = str(time.strftime(" %m  %d "))
+        arduino['7r2 Data'] = str(time.strftime("  %Y  "))
+        arduino['7r3 Data'] = '        '
+        arduino['7r4 Data'] = '        '
+        arduino['g0 Data'] = chr(0)
+        arduino['g1 Data'] = chr(0)
+        arduino['g2 Data'] = chr(0)
+        arduino['g3 Data'] = chr(0)
+        arduino['g4 Data'] = chr(0)
+        arduino['g5 Data'] = chr(0)
+        arduino['g6 Data'] = chr(0)
+        arduino['g7 Data'] = chr(0)
+    else:
+        arduino['7r0 Data'] = str(int(round(fd["MET"]))).zfill(8)
+        arduino['7r1 Data'] = str(int(round(fd["ASL"] / 100))).zfill(8)
+        arduino['7r2 Data'] = str(int(round(fd["Ap"] / 100))).zfill(8)
+        arduino['7r3 Data'] = str(int(round(fd["Pe"] / 100))).zfill(8)
+        arduino['7r4 Data'] = str(int(round(fd["Time to Ap"]))).zfill(8)
+        arduino['g0 Data'] = 'A'
+        arduino['g1 Data'] = 'A'
+        arduino['g2 Data'] = 'A'
+        arduino['g3 Data'] = 'A'
+        arduino['g4 Data'] = 'A'
+        arduino['g5 Data'] = 'A'
+        arduino['g6 Data'] = 'A'
+        arduino['g7 Data'] = 'A'
 
 
 def buttonHandler():
@@ -461,6 +537,15 @@ ps = {  # Program Settings
 'Arduino Sleep Marker': 0, 'Arduino Active': False, 'Button Sleep Marker': 0,
 'flightData Sleep Marker': 0, 'Gear Status': False, 'Brake Status': False}
 
+arduino = {  # Arduino Configurtion, using rows
+'Display Mode': 'Lamp Test',
+'7r0 Name': 'MET', '7r0 Data': str().zfill(8),
+'7r1 Name': 'ASL', '7r1 Data': str().zfill(8),
+'7r2 Name': 'Ap', '7r2 Data': str().zfill(8),
+'7r3 Name': 'Pe', '7r3 Data': str().zfill(8),
+'7r4 Name': 'Time to Ap', '7r4 Data': str().zfill(8),
+'g0 Name': 'MET', 'g0 Data': str().zfill(1)
+}
 arduinoSleepMarker = 0
 buttonSleepMarker = 0
 flightDataSleepMarker = 0
@@ -540,12 +625,21 @@ is. This will also need to be a seperate def with reversed colors'''
         else:
             climbgauge = 127  # Neutral
 
-        memA = (str(int(round(fd["MET"]))).zfill(8)
-            + str(int(round(fd["ASL"] / 100))).zfill(8)
-            + str(int(round(fd["Ap"] / 100))).zfill(8)
-            + str(int(round(fd["Pe"] / 100))).zfill(8)
-            + str(int(round(fd['Vertical Speed']))).zfill(8)
-            + chr(climbgauge) + 'BCDEFGH'
+        formatForArduino(arduino['Display Mode'])
+        memA = (
+            str(arduino['7r0 Data']) +
+            str(arduino['7r1 Data']) +
+            str(arduino['7r2 Data']) +
+            str(arduino['7r3 Data']) +
+            str(arduino['7r4 Data']) +
+            str(arduino['g0 Data']) +
+            str(arduino['g1 Data']) +
+            str(arduino['g2 Data']) +
+            str(arduino['g3 Data']) +
+            str(arduino['g4 Data']) +
+            str(arduino['g5 Data']) +
+            str(arduino['g6 Data']) +
+            str(arduino['g7 Data'])
             )
 
         if arduinoSleepMarker > 0.25:
