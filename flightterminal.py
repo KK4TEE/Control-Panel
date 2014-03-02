@@ -57,9 +57,23 @@ def getFlightData(dIN):
         d['Orbital Period'] = float(tele.read_orbitalperiod())
         d['Vertical Speed'] = float(tele.read_verticalspeed())
 
-        d['SAS Status'] = bool(tele.sas(2))
-        d['RCS Status'] = bool(tele.rcs(2))
-        d['Light Status'] = bool(tele.light(2))
+        d['SAS Status'] = int(tele.sas(2))
+        if d['SAS Status'] == 1:
+            d['SAS Status'] = True
+        elif d['SAS Status'] == 0:
+            d['SAS Status'] = False
+        else:
+            d['SAS Status'] = 'Error'
+        d['RCS Status'] = int(tele.rcs(2))
+        if d['RCS Status'] == 1:
+            d['RCS Status'] = True
+        else:
+            d['RCS Status'] = False
+        d['Light Status'] = int(tele.light(2))
+        if d['Light Status'] == 1:
+            d['Light Status'] = True
+        else:
+            d['Light Status'] = False
 
         d['ElectricCharge'] = float(tele.read_resource('ElectricCharge'))
         d['Max ElectricCharge'] = float(tele.read_resource_max(
@@ -67,9 +81,19 @@ def getFlightData(dIN):
         d['LiquidFuel'] = float(tele.read_resource('LiquidFuel'))
         d['Max LiquidFuel'] = float(tele.read_resource_max('LiquidFuel'))
         d['Oxidizer'] = float(tele.read_resource('Oxidizer'))
-        d['MaxOxidizer'] = float(tele.read_resource_max('Oxidizer'))
+        d['Max Oxidizer'] = float(tele.read_resource_max('Oxidizer'))
         d['SolidFuel'] = float(tele.read_resource('SolidFuel'))
         d['Max SolidFuel'] = float(tele.read_resource_max('SolidFuel'))
+        d['MonoPropellant'] = float(tele.read_resource('MonoPropellant'))
+        d['Max MonoPropellant'] = float(tele.read_resource_max('MonoPropellant'))
+        # If you are playing with realism mods, uncomment these as needed
+        d['Oxygen'] = float(tele.read_resource('Oxygen'))
+        d['Max Oxygen'] = float(tele.read_resource_max('Oxygen'))
+        d['LiquidOxygen'] = float(tele.read_resource('LiquidOxygen'))
+        d['Max LiquidOxygen'] = float(tele.read_resource_max('LiquidOxygen'))
+        d['LiquidH2'] = float(tele.read_resource('LiquidH2'))
+        d['Max LiquidH2'] = float(tele.read_resource_max('LiquidH2'))
+
 
         d['Previous Radio Contact'] = dIN['Radio Contact']
         d['Radio Contact'] = True
@@ -169,25 +193,47 @@ def drawResourceWindow(yCord, xCord):
     resourceW.addstr(yL, 1, "##       Resources        ##",
         curses.A_STANDOUT)
     yL += 1
-    resourceW.addstr(yL, 1, "Electric Charge:")
-    resourceW.addstr(yL, 20, str(int(fd['ElectricCharge']))
-        .zfill(filldigits))
-    yL += 1
-    resourceW.addstr(yL, 1, "Liquid Fuel:")
-    resourceW.addstr(yL, 20, str(int(fd['LiquidFuel']))
-        .zfill(filldigits))
-    yL += 1
-    resourceW.addstr(yL, 1, "Oxidizer:")
-    resourceW.addstr(yL, 20, str(int(fd['Oxidizer']))
-        .zfill(filldigits))
-    yL += 1
-    resourceW.addstr(yL, 1, "Solid Fuel:")
-    cSolidFuel = int(fd['SolidFuel'])
-    if cSolidFuel < 0:
-        resourceW.addstr(yL, 20, "# None #", curses.color_pair(3))
-    else:
-        resourceW.addstr(yL, 20, str(cSolidFuel).zfill(filldigits))
-    yL += 1
+    if fd['ElectricCharge'] != -1:
+        resourceW.addstr(yL, 1, "Electricity:")
+        resourceW.addstr(yL, 20, str(int(fd['ElectricCharge']))
+            .zfill(filldigits))
+        yL += 1
+    if fd['Oxygen'] != -1:
+        resourceW.addstr(yL, 1, "Oxygen:")
+        resourceW.addstr(yL, 20, str(int(fd['Oxygen']))
+            .zfill(filldigits))
+        yL += 1
+    if fd['MonoPropellant'] != -1:
+        resourceW.addstr(yL, 1, "MonoPropellant:")
+        resourceW.addstr(yL, 20, str(int(fd['MonoPropellant']))
+            .zfill(filldigits))
+        yL += 1
+    if fd['LiquidFuel'] != -1:
+        resourceW.addstr(yL, 1, "Liquid Fuel:")
+        resourceW.addstr(yL, 20, str(int(fd['LiquidFuel']))
+            .zfill(filldigits))
+        yL += 1
+    if fd['Oxidizer'] != -1:
+        resourceW.addstr(yL, 1, "Oxidizer:")
+        resourceW.addstr(yL, 20, str(int(fd['Oxidizer']))
+            .zfill(filldigits))
+        yL += 1
+    if fd['SolidFuel'] != -1:
+        resourceW.addstr(yL, 1, "Solid Fuel:")
+        resourceW.addstr(yL, 20, str(int(fd['SolidFuel']))
+            .zfill(filldigits))
+        yL += 1
+    if fd['LiquidH2'] != -1:
+        resourceW.addstr(yL, 1, "Liquid Hydrogen:")
+        resourceW.addstr(yL, 20, str(int(fd['LiquidH2']))
+            .zfill(filldigits))
+        yL += 1
+    if fd['LiquidOxygen'] != -1:
+        resourceW.addstr(yL, 1, "Liquid Oxygen:")
+        resourceW.addstr(yL, 20, str(int(fd['LiquidOxygen']))
+            .zfill(filldigits))
+        yL += 1
+
     return yL
 
 
@@ -204,7 +250,8 @@ def drawArduinoWindow(yCord, xCord):
     try:
         arduinoW.addstr(yL, 1, str(memA))
     except:
-        arduinoW.addstr(yL, 1, 'Memory contains bytes that can not be printed')
+        arduinoW.addstr(yL, 1,
+        'Memory contains bytes that can not be printed    ')
     yL += 1
     yL += 1
     arduinoW.addstr(yL, 1, "Serial In:")
@@ -232,6 +279,18 @@ def drawMainMenu(yCord, xCord):
 
     mainMenu.addstr(0, 12 - 5, " Main Menu ",
         curses.A_BOLD)
+    if ps['Main Menu Selection'] == yL:
+            mainMenu.addstr(yL, 1, str(yL) + ":Toggle Flight Data", FSO)
+            if chrin == ord('\n'):
+                myscreen.clear()
+                if ps['Flight Transceiver Active'] is True:
+                    ps['Flight Transceiver Active'] = False
+                elif ps['Flight Transceiver Active'] is False:
+                    ps['Flight Transceiver Active'] = True
+    else:
+            mainMenu.addstr(yL, 1, str(yL) + ":Toggle Flight Data")
+
+    yL += 1
 
     if arduinoConnected is True:
         if ps['Main Menu Selection'] == yL and ps['Arduino Active'] is False:
@@ -347,10 +406,11 @@ def formatRCC(inputln):  # Formating Reading Color Critical
         return str(int(inputln)).zfill(filldigits)
 
 
-def drawVGauge(gLabel, percentVal, yCord, xCord):
+def drawVGauge(gLabel, resource, yCord, xCord):
     # Draws a gauge from 0-100% that is 30 rows x 15 Coll with the top left
     # corner at (yCord, xCord)
-    percentVal = round(percentVal, 1)
+    percentVal = round((fd[resource] /
+        fd[str('Max ' + resource)]) * 100, 1)
     if percentVal >= 100:
         percentVal = int(100)
     gauge = myscreen.subwin(25, 15, yCord, xCord)
@@ -365,7 +425,6 @@ def drawVGauge(gLabel, percentVal, yCord, xCord):
                 gauge.attron(curses.color_pair(3))
                 gauge.vline(22 - barHeight, 7 + n, curses.ACS_CKBOARD,
                     barHeight)
-
                 gauge.attroff(curses.color_pair(3))
             if barHeight >= 5:
                 gauge.attron(curses.color_pair(2))
@@ -378,8 +437,16 @@ def drawVGauge(gLabel, percentVal, yCord, xCord):
                     barHeight - 10)
                 gauge.attroff(curses.color_pair(1))
         gauge.addstr(23, 5, str(percentVal).zfill(3) + '%')
-    elif percentVal < 1:
+    elif percentVal < 5 and percentVal > 0:
+        gauge.attron(curses.color_pair(3))
+        gauge.addstr(23, 6, 'Low')
+        gauge.attroff(curses.color_pair(3))
+    elif percentVal == 0:
+        gauge.attron(curses.color_pair(3))
         gauge.addstr(23, 5, 'Empty')
+        gauge.attroff(curses.color_pair(3))
+    else:
+        gauge.addstr(23, 1, 'Not Available')
 
 
 ###  Arduino Utilities
@@ -409,19 +476,21 @@ def formatForArduino(mode):
         arduino['g7 Data'] = chr(255)
 
     elif mode == 'Clock':
-        arduino['7r0 Data'] = str(time.strftime("%H %M %S"))
-        arduino['7r1 Data'] = str(time.strftime(" %m  %d "))
-        arduino['7r2 Data'] = str(time.strftime("  %Y  "))
-        arduino['7r3 Data'] = '        '
+        '''There's something weird going on here that causes the code to
+        take a full 300ms or so to loop. This requires further research.'''
+        arduino['7r0 Data'] = '        '
+        arduino['7r1 Data'] = str(time.strftime("%H %M %S"))
+        arduino['7r2 Data'] = str(time.strftime(" %m  %d "))
+        arduino['7r3 Data'] = str(time.strftime("  %Y  "))
         arduino['7r4 Data'] = '        '
-        arduino['g0 Data'] = chr(0)
-        arduino['g1 Data'] = chr(0)
-        arduino['g2 Data'] = chr(0)
-        arduino['g3 Data'] = chr(0)
-        arduino['g4 Data'] = chr(0)
-        arduino['g5 Data'] = chr(0)
-        arduino['g6 Data'] = chr(0)
-        arduino['g7 Data'] = chr(0)
+        arduino['g0 Data'] = '0'
+        arduino['g1 Data'] = '0'
+        arduino['g2 Data'] = '0'
+        arduino['g3 Data'] = '0'
+        arduino['g4 Data'] = '0'
+        arduino['g5 Data'] = '0'
+        arduino['g6 Data'] = '0'
+        arduino['g7 Data'] = '0'
     else:
         arduino['7r0 Data'] = str(int(round(fd["MET"]))).zfill(8)
         arduino['7r1 Data'] = str(int(round(fd["ASL"] / 100))).zfill(8)
@@ -527,12 +596,19 @@ fd = {  # Primary data storage
 'MET': -1, 'ASL': -1, 'Ap': -1, 'Pe': -1, 'Time to Ap': -1, 'Time to Pe': -1,
 'Eccentricity': -1, 'Inclination': -1, 'Orbital Period': -1,
 'Vertical Speed': -1, 'SAS Status': -1, 'RCS Status': -1, 'Light Status': -1,
-'ElectricCharge': -1, 'Max ElectricCharge': -1, 'LiquidFuel': -1,
-'Max LiquidFuel': -1, 'Oxidizer': -1, 'MaxOxidizer': -1, 'SolidFuel': -1,
-'Max SolidFuel': -1, 'Radio Contact': False, 'Previous Radio Contact': False}
+'ElectricCharge': -1, 'Max ElectricCharge': -1,
+'LiquidFuel': -1, 'Max LiquidFuel': -1,
+'Oxidizer': -1, 'MaxOxidizer': -1,
+'SolidFuel': -1,'Max SolidFuel': -1,
+'MonoPropellant': -1, 'Max MonoPropellant': -1,
+'Oxygen': -1, 'Max Oxygen': -1,  # Realisim Resources
+'LiquidH2': -1, 'Max LiquidH2': -1,
+'LiquidOxygen': -1, 'Max LiquidOxygen': -1,
+'Radio Contact': False, 'Previous Radio Contact': False}
 
 ps = {  # Program Settings
 'Main Menu is Open': False, 'Main Menu Selection': 1, 'Slection Made': False,
+'Flight Transceiver Active': False,
 'Terminal Max Y': 25, 'Terminal Max X': 40,
 'Arduino Sleep Marker': 0, 'Arduino Active': False, 'Button Sleep Marker': 0,
 'flightData Sleep Marker': 0, 'Gear Status': False, 'Brake Status': False}
@@ -558,19 +634,20 @@ print ps['Terminal Max Y']
 print ps['Terminal Max X']
 
 ### Flight Computer Section ##################################################
-while chrin != 48:
+while chrin != 48:  # Loop until the user presses the Zero key
     loopStartTime = time.time()
     if (ps['Terminal Max Y'], ps['Terminal Max X']) != myscreen.getmaxyx():
         myscreen.clear()
-    if flightDataSleepMarker > config.pollInterval() and (
-        fd['Radio Contact'] is True):
-        fd = getFlightData(fd)
+    if ps['Flight Transceiver Active'] is True:
+        if flightDataSleepMarker > config.pollInterval() and (
+            fd['Radio Contact'] is True):
+            fd = getFlightData(fd)
     #### Expand this into an actual error handling bit.
     # Do a single test once per second that only polls one item
     # Alternativel, do actually multithreading w/ the URL stuff in the other
     # thread. That makes far more sense.
-    elif flightDataSleepMarker > config.pollInterval() + 2:
-        fd = getFlightData(fd)
+        elif flightDataSleepMarker > config.pollInterval() + 2:
+            fd = getFlightData(fd)
 
     myscreen.border()
     ps['Terminal Max Y'], ps['Terminal Max X'] = myscreen.getmaxyx()
@@ -592,21 +669,27 @@ while chrin != 48:
 
     #myscreen.vline(20, 35, curses.ACS_CKBOARD, 4)
     #drawVGauge("Test Gauge", 42, 1, 35)
-    drawVGauge("Electricity", fd['ElectricCharge'] /
-        fd['Max ElectricCharge'] * 100, 1, 31)
-    drawVGauge("Liquid Fuel", (fd['LiquidFuel'] /
-        fd['Max LiquidFuel']) * 100, 1, 46)
+    if fd['ElectricCharge'] != -1:
+        drawVGauge("Electricity", 'ElectricCharge', 1, 31)
 
-    if fd['SolidFuel'] != -1:
-        drawVGauge("Solid Fuel", (fd['SolidFuel'] /
-            fd['Max SolidFuel']) * 100, 1, 61)
-    else:
-        drawVGauge("Solid Fuel", 0, 1, 61)
+    if fd['Oxygen'] != -1:
+        drawVGauge("Oxygen", 'Oxygen', 1, 61)
 
-    drawVGauge("G-Force", fd['Vertical Speed'] / 100, 1, 76)
-    ''' No, the above unit does not make sense. I need to get it working so
-that I can take the derivative of speed to figure out what the actual gforce
-is. This will also need to be a seperate def with reversed colors'''
+    if fd['MonoPropellant'] != -1:
+        drawVGauge("MonoProp.", 'MonoPropellant', 1, 46)
+
+    if fd['LiquidFuel'] != -1:
+        drawVGauge("LiquidFuel", 'LiquidFuel', 1, 61)
+
+    if fd['Oxidizer'] != -1:
+        drawVGauge("Oxidizer", 'Oxidizer', 1, 61)
+
+
+    if fd['LiquidH2'] != -1:
+        drawVGauge("Liquid H2", 'LiquidH2', 1, 76)
+
+    if fd['LiquidOxygen'] != -1:
+        drawVGauge("Liquid Oxygen", 'LiquidOxygen', 1, 91)
 
 ### Arduino Section ##########################################################
 
@@ -645,23 +728,28 @@ is. This will also need to be a seperate def with reversed colors'''
         if arduinoSleepMarker > 0.25:
             try:
                 push_to_arduino(memA)
+            except:
+                pass
             finally:
                 arduinoSleepMarker = 0
 
         if ser.inWaiting > 9:
-            serCharIn = str(ser.read(1))
-            if serCharIn == '[':
-                while n < 12:
-                    serCharIn = str(ser.read(1))
-                    if serCharIn == ']':
-                        n = 0
-                        ser.flushInput()
-                        break
-                    else:
-                        memB[n] = serCharIn
-                    n += 1
-                    if n == 11:
-                        ser.flushInput()
+            try:
+                serCharIn = str(ser.read(1))
+                if serCharIn == '[':
+                    while n < 12:
+                        serCharIn = str(ser.read(1))
+                        if serCharIn == ']':
+                            n = 0
+                            ser.flushInput()
+                            break
+                        else:
+                            memB[n] = serCharIn
+                        n += 1
+                        if n == 11:
+                            ser.flushInput()
+            except:
+                ser.flushInput()
 
         if buttonSleepMarker > 0.1:
             buttonHandler()
