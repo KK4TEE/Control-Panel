@@ -1,7 +1,7 @@
 
 # This allows you to more conveniently write scripts that can interface with
 # Telemachus
-url = 'http://127.0.0.1:8085/telemachus/datalink?alt='
+#url = 'http://127.0.0.1:8085/telemachus/datalink?alt='
 #url = 'http://192.168.1.3:8085/telemachus/datalink?alt='
     # This is the URL that Telemachus can be found at.
     # Adjust it based on your firewall settings.
@@ -11,7 +11,9 @@ import urllib2
 import time
 import os
 import math
-from config import *
+import config
+
+url = config.url()
 # Telemachus Definitions
     #The readings are for the active vessel unless otherwise noted
 def read_angularvelocity():
@@ -161,16 +163,16 @@ def brake(var):
         #fresh_json = json.load(urllib2.urlopen(url + 'v.gearValue'))
         #return fresh_json["alt"]
         return (-1)
-        print 'The brake:read feature is not yet support by telemachus'
+        #print 'The brake:read feature is not yet support by telemachus'
     elif var == 1:
         urllib2.urlopen(url + 'f.brake' + '[' + 'true' + ']')
-        print 'Setting Brake to on'
+        #print 'Setting Brake to on'
     elif var == 0:
         urllib2.urlopen(url + 'f.brake' + '[' + 'false' + ']')
-        print 'Setting Brake to off'
+        #print 'Setting Brake to off'
     else:
         return (-1)
-        print 'Brake value was set wrong'
+        #print 'Brake value was set wrong'
 
 
 def gear(var):
@@ -178,16 +180,16 @@ def gear(var):
         #fresh_json = json.load(urllib2.urlopen(url + 'v.gearValue'))
         #return fresh_json["alt"]
         return (-1)
-        print 'The gear:read feature is not yet support by telemachus'
+        #print 'The gear:read feature is not yet support by telemachus'
     elif var == 1:
         urllib2.urlopen(url + 'f.gear' + '[' + 'true' + ']')
-        print 'Setting Gear to on'
+        #print 'Setting Gear to on'
     elif var == 0:
         urllib2.urlopen(url + 'f.gear' + '[' + 'false' + ']')
-        print 'Setting Gear to off'
+        #print 'Setting Gear to off'
     else:
         return (-1)
-        print 'Gear value was set wrong'
+        #print 'Gear value was set wrong'
 
 
 def light(var):
@@ -201,13 +203,13 @@ def light(var):
             return fresh_json["alt"]
     elif var == 1:
         urllib2.urlopen(url + 'f.light' + '[' + 'true' + ']')
-        print 'Setting Light to TRUE'
+        #print 'Setting Light to TRUE'
     elif var == 0:
         urllib2.urlopen(url + 'f.light' + '[' + 'false' + ']')
-        print 'Setting Light to False'
+        #print 'Setting Light to False'
     else:
         return (-1)
-        print 'Light value was set wrong'
+        #print 'Light value was set wrong'
 
 
 def rcs(var):
@@ -221,13 +223,13 @@ def rcs(var):
             return fresh_json["alt"]
     elif var == 1:
         urllib2.urlopen(url + 'f.rcs' + '[' + 'true' + ']')
-        print 'Setting RCS to TRUE'
+        #print 'Setting RCS to TRUE'
     elif var == 0:
         urllib2.urlopen(url + 'f.rcs' + '[' + 'false' + ']')
-        print 'Setting RCS to False'
+        #print 'Setting RCS to False'
     else:
         return (-1)
-        print 'RCS value was set wrong'
+        #print 'RCS value was set wrong'
 
 
 def sas(var):
@@ -241,13 +243,13 @@ def sas(var):
             return fresh_json["alt"]
     elif var == 1:
         urllib2.urlopen(url + 'f.sas' + '[' + 'true' + ']')
-        print 'Setting SAS to TRUE'
+        #print 'Setting SAS to TRUE'
     elif var == 0:
         urllib2.urlopen(url + 'f.sas' + '[' + 'false' + ']')
-        print 'Setting SAS to False'
+        #print 'Setting SAS to False'
     else:
         return (-1)
-        print 'SAS value was set wrong'
+        #print 'SAS value was set wrong'
 
 
 def stage():
