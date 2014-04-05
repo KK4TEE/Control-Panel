@@ -57,6 +57,20 @@ def getFlightData(dIN):
         d['Orbital Period'] = float(tele.read_orbitalperiod())
         d['Vertical Speed'] = float(tele.read_verticalspeed())
 
+
+
+        d['Brake Status'] = int(tele.brake(2))
+        if d['Brake Status'] == 1:
+            d['Brake Status'] = True
+        elif d['Brake Status'] == 0:
+            d['Brake Status'] = False
+
+        d['Gear Status'] = int(tele.gear(2))
+        if d['Gear Status'] == 1:
+            d['Gear Status'] = True
+        elif d['Gear Status'] == 0:
+            d['Gear Status'] = False
+
         d['SAS Status'] = int(tele.sas(2))
         if d['SAS Status'] == 1:
             d['SAS Status'] = True
@@ -177,10 +191,10 @@ def drawPrimaryStatusWindow(yCord, xCord):
     primaryStatusW.addstr(yL, 20, str(fd['Light Status']).ljust(5))
     yL += 1
     primaryStatusW.addstr(yL, 1, "Landing Gear:")
-    primaryStatusW.addstr(yL, 20, str(ps['Gear Status']).ljust(5))
+    primaryStatusW.addstr(yL, 20, str(fd['Gear Status']).ljust(5))
     yL += 1
     primaryStatusW.addstr(yL, 1, "Brake Status:")
-    primaryStatusW.addstr(yL, 20, str(ps['Brake Status']).ljust(5))
+    primaryStatusW.addstr(yL, 20, str(fd['Brake Status']).ljust(5))
     yL += 1
     return yL
 
@@ -604,7 +618,9 @@ fd = {  # Primary data storage
 'Oxygen': -1, 'Max Oxygen': -1,  # Realisim Resources
 'LiquidH2': -1, 'Max LiquidH2': -1,
 'LiquidOxygen': -1, 'Max LiquidOxygen': -1,
-'Radio Contact': False, 'Previous Radio Contact': False}
+'Radio Contact': False, 'Previous Radio Contact': False,
+'Gear Status':False,
+'Brake Status':False}
 
 ps = {  # Program Settings
 'Main Menu is Open': False, 'Main Menu Selection': 1, 'Slection Made': False,
