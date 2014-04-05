@@ -598,7 +598,7 @@ fd = {  # Primary data storage
 'Vertical Speed': -1, 'SAS Status': -1, 'RCS Status': -1, 'Light Status': -1,
 'ElectricCharge': -1, 'Max ElectricCharge': -1,
 'LiquidFuel': -1, 'Max LiquidFuel': -1,
-'Oxidizer': -1, 'MaxOxidizer': -1,
+'Oxidizer': -1, 'Max Oxidizer': -1,
 'SolidFuel': -1,'Max SolidFuel': -1,
 'MonoPropellant': -1, 'Max MonoPropellant': -1,
 'Oxygen': -1, 'Max Oxygen': -1,  # Realisim Resources
