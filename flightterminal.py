@@ -624,7 +624,7 @@ arduino = {  # Arduino Configurtion, using rows
 }
 arduinoSleepMarker = 0
 buttonSleepMarker = 0
-flightDataSleepMarker = 0
+flightDataSleepMarker = config.pollInterval()
 memB = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # Current serial input
 memBOLD = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # Old serial input
 n = 0
@@ -639,15 +639,17 @@ while chrin != 48:  # Loop until the user presses the Zero key
     if (ps['Terminal Max Y'], ps['Terminal Max X']) != myscreen.getmaxyx():
         myscreen.clear()
     if ps['Flight Transceiver Active'] is True:
-        if flightDataSleepMarker > config.pollInterval() and (
+        if flightDataSleepMarker >= config.pollInterval() and (
             fd['Radio Contact'] is True):
             fd = getFlightData(fd)
+            flightDataSleepMarker = 0
     #### Expand this into an actual error handling bit.
     # Do a single test once per second that only polls one item
     # Alternativel, do actually multithreading w/ the URL stuff in the other
     # thread. That makes far more sense.
-        elif flightDataSleepMarker > config.pollInterval() + 2:
+        elif flightDataSleepMarker >= config.pollInterval() + 2:
             fd = getFlightData(fd)
+            flightDataSleepMarker = 0
 
     myscreen.border()
     ps['Terminal Max Y'], ps['Terminal Max X'] = myscreen.getmaxyx()
