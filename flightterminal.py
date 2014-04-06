@@ -73,20 +73,8 @@ def getFlightData(dIN):
         d['Roll'] = float(tele.read_facing('roll'))
         d['Throttle'] = float(tele.read_throttle())
 
-
-
         d['Brake Status'] = int(tele.brake(2))
-        if d['Brake Status'] == 1:
-            d['Brake Status'] = True
-        elif d['Brake Status'] == 0:
-            d['Brake Status'] = False
-
         d['Gear Status'] = int(tele.gear(2))
-        if d['Gear Status'] == 1:
-            d['Gear Status'] = True
-        elif d['Gear Status'] == 0:
-            d['Gear Status'] = False
-
         d['SAS Status'] = int(tele.sas(2))
         d['RCS Status'] = int(tele.rcs(2))
         d['Light Status'] = int(tele.light(2))
@@ -132,6 +120,14 @@ def getFlightData(dIN):
             d['Light Status'] = True
         else:
             d['Light Status'] = False
+        if d['Gear Status'] == 1:
+            d['Gear Status'] = True
+        elif d['Gear Status'] == 0:
+            d['Gear Status'] = False
+        if d['Brake Status'] == 1:
+            d['Brake Status'] = True
+        elif d['Brake Status'] == 0:
+            d['Brake Status'] = False
 
         return d
 
@@ -347,6 +343,7 @@ def drawMainMenu(yCord, xCord):
             mainMenu.addstr(yL, 1, str(yL) + ":Set Disp. to Standard", FSO)
             if chrin == ord('\n'):
                 ps['Display Mode'] = 'Standard'
+                myscreen.clear()
         else:
             mainMenu.addstr(yL, 1, str(yL) + ":Set Disp. to Standard")
     elif ps['Display Mode'] is 'Standard':
@@ -771,24 +768,23 @@ fd = {  # Primary data storage
 'Vertical Speed': -1, 'Surface Speed': -1, 'Pitch': -1, 'Roll': -1, 'Yaw': -1,
 'Height From Terrain': -1,
 'Throttle': -1, 'SAS Status': -1, 'RCS Status': -1, 'Light Status': -1,
+'Brake Status': -1, 'Gear Status': -1,
 'ElectricCharge': -1, 'Max ElectricCharge': -1,
 'LiquidFuel': -1, 'Max LiquidFuel': -1,
 'Oxidizer': -1, 'Max Oxidizer': -1,
-'SolidFuel': -1,'Max SolidFuel': -1,
+'SolidFuel': -1, 'Max SolidFuel': -1,
 'MonoPropellant': -1, 'Max MonoPropellant': -1,
 'Oxygen': -1, 'Max Oxygen': -1,  # Realisim Resources
 'LiquidH2': -1, 'Max LiquidH2': -1,
 'LiquidOxygen': -1, 'Max LiquidOxygen': -1,
 'MMH': -1, 'Max MMH': -1,
 'N2O4': -1, 'Max N2O4': -1,
-'Radio Contact': False, 'Previous Radio Contact': False,
-'Gear Status':False,
-'Brake Status':False}
+'Radio Contact': False, 'Previous Radio Contact': False}
 
 ps = {  # Program Settings
 'Main Menu is Open': False, 'Main Menu Selection': 1, 'Slection Made': False,
 'Display Mode': 'Standard',
-'Flight Transceiver Active': False,
+'Flight Transceiver Active': True,
 'Terminal Max Y': 25, 'Terminal Max X': 40,
 'Arduino Sleep Marker': 0, 'Arduino Active': False, 'Button Sleep Marker': 0,
 'flightData Sleep Marker': 0, 'Gear Status': False, 'Brake Status': False}
