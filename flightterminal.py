@@ -1,4 +1,4 @@
-# python 2.7
+#!/usr/bin/env python
 
 # note: The data gathering portion of this should be centralized
 # At the begining of each loop all needed data should be collected
@@ -10,6 +10,16 @@
 # Text display window is 25y by 30x chr
 # Each gauge window is   25y by 15x including boarders
 # Resource window is 10y by 15x
+
+'''To do list:
+    Update the gauge drawing routine so that is only draws a gauge if a
+    tank for that resource exists
+
+    Add multithreading support so that the telemetry update timeouts dont
+    interfere with the rest of the program
+
+    Actually fix the serial communications with the arduino so that they use
+    proper headers and footers that dont interfere with the actual data'''
 import math
 import time
 import curses
@@ -47,6 +57,7 @@ def getFlightData(dIN):
     try:
         d['MET'] = float(tele.read_missiontime())
         d['ASL'] = int(tele.read_asl())
+        d['Height From Terrain'] = int(tele.read_heightFromTerrain())
         d['Body'] = str(tele.read_body())
         d['Ap'] = int(tele.read_apoapsis())
         d['Pe'] = int(tele.read_periapsis())
@@ -56,24 +67,15 @@ def getFlightData(dIN):
         d['Inclination'] = float(tele.read_inclination())
         d['Orbital Period'] = float(tele.read_orbitalperiod())
         d['Vertical Speed'] = float(tele.read_verticalspeed())
+        d['Surface Speed'] = float(tele.read_surfacespeed())
+        d['Pitch'] = float(tele.read_facing('pitch'))
+        d['Yaw'] = float(tele.read_facing('yaw'))
+        d['Roll'] = float(tele.read_facing('roll'))
+        d['Throttle'] = float(tele.read_throttle())
 
         d['SAS Status'] = int(tele.sas(2))
-        if d['SAS Status'] == 1:
-            d['SAS Status'] = True
-        elif d['SAS Status'] == 0:
-            d['SAS Status'] = False
-        else:
-            d['SAS Status'] = 'Error'
         d['RCS Status'] = int(tele.rcs(2))
-        if d['RCS Status'] == 1:
-            d['RCS Status'] = True
-        else:
-            d['RCS Status'] = False
         d['Light Status'] = int(tele.light(2))
-        if d['Light Status'] == 1:
-            d['Light Status'] = True
-        else:
-            d['Light Status'] = False
 
         d['ElectricCharge'] = float(tele.read_resource('ElectricCharge'))
         d['Max ElectricCharge'] = float(tele.read_resource_max(
@@ -93,10 +95,30 @@ def getFlightData(dIN):
         d['Max LiquidOxygen'] = float(tele.read_resource_max('LiquidOxygen'))
         d['LiquidH2'] = float(tele.read_resource('LiquidH2'))
         d['Max LiquidH2'] = float(tele.read_resource_max('LiquidH2'))
-
+        d['MMH'] = float(tele.read_resource('MMH'))
+        d['Max MMH'] = float(tele.read_resource_max('MMH'))
+        d['N2O4'] = float(tele.read_resource('N2O4'))
+        d['Max N2O4'] = float(tele.read_resource_max('N2O4'))
 
         d['Previous Radio Contact'] = dIN['Radio Contact']
         d['Radio Contact'] = True
+
+        #Clean up the data types
+        if d['SAS Status'] == 1:
+            d['SAS Status'] = True
+        elif d['SAS Status'] == 0:
+            d['SAS Status'] = False
+        else:
+            d['SAS Status'] = 'Error'
+        if d['RCS Status'] == 1:
+            d['RCS Status'] = True
+        else:
+            d['RCS Status'] = False
+        if d['Light Status'] == 1:
+            d['Light Status'] = True
+        else:
+            d['Light Status'] = False
+
         return d
 
     except:
@@ -233,6 +255,16 @@ def drawResourceWindow(yCord, xCord):
         resourceW.addstr(yL, 20, str(int(fd['LiquidOxygen']))
             .zfill(filldigits))
         yL += 1
+    if fd['MMH'] != -1:
+        resourceW.addstr(yL, 1, "MMH:")
+        resourceW.addstr(yL, 20, str(int(fd['MMH']))
+            .zfill(filldigits))
+        yL += 1
+    if fd['N2O4'] != -1:
+        resourceW.addstr(yL, 1, "N2O4:")
+        resourceW.addstr(yL, 20, str(int(fd['N2O4']))
+            .zfill(filldigits))
+        yL += 1
 
     return yL
 
@@ -279,24 +311,62 @@ def drawMainMenu(yCord, xCord):
 
     mainMenu.addstr(0, 12 - 5, " Main Menu ",
         curses.A_BOLD)
-    if ps['Main Menu Selection'] == yL:
-            mainMenu.addstr(yL, 1, str(yL) + ":Toggle Flight Data", FSO)
+    if ps['Flight Transceiver Active'] is False:
+        if ps['Main Menu Selection'] == yL:
+            mainMenu.addstr(yL, 1, str(yL) + ":Activate Flight Data", FSO)
             if chrin == ord('\n'):
-                myscreen.clear()
-                if ps['Flight Transceiver Active'] is True:
-                    ps['Flight Transceiver Active'] = False
-                elif ps['Flight Transceiver Active'] is False:
-                    ps['Flight Transceiver Active'] = True
-    else:
-            mainMenu.addstr(yL, 1, str(yL) + ":Toggle Flight Data")
-
+                ps['Flight Transceiver Active'] = True
+        else:
+            mainMenu.addstr(yL, 1, str(yL) + ":Activate Flight Data")
+    elif ps['Flight Transceiver Active'] is True:
+        if ps['Main Menu Selection'] == yL:
+            mainMenu.addstr(yL, 1, str(yL) + ":Dectivate Flight Data", FSO)
+            if chrin == ord('\n'):
+                ps['Flight Transceiver Active'] = False
+        else:
+            mainMenu.addstr(yL, 1, str(yL) + ":Dectivate Flight Data")
     yL += 1
 
+###### Set Display Options
+    if ps['Display Mode'] is not 'Standard':
+        if ps['Main Menu Selection'] == yL:
+            mainMenu.addstr(yL, 1, str(yL) + ":Set Disp. to Standard", FSO)
+            if chrin == ord('\n'):
+                ps['Display Mode'] = 'Standard'
+        else:
+            mainMenu.addstr(yL, 1, str(yL) + ":Set Disp. to Standard")
+    elif ps['Display Mode'] is 'Standard':
+        if ps['Main Menu Selection'] == yL:
+            mainMenu.addstr(yL, 1, str(yL) + ":Dectivate Display", FSO)
+            if chrin == ord('\n'):
+                ps['Display Mode'] = 'Off'
+                myscreen.clear()
+        else:
+            mainMenu.addstr(yL, 1, str(yL) + ":Dectivate Display")
+    yL += 1
+
+    if ps['Display Mode'] is not 'Landing':
+        if ps['Main Menu Selection'] == yL:
+            mainMenu.addstr(yL, 1, str(yL) + ":Set Disp. to Landing", FSO)
+            if chrin == ord('\n'):
+                ps['Display Mode'] = 'Landing'
+        else:
+            mainMenu.addstr(yL, 1, str(yL) + ":Set Disp. to Landing")
+    elif ps['Display Mode'] is 'Landing':
+        if ps['Main Menu Selection'] == yL:
+            mainMenu.addstr(yL, 1, str(yL) + ":Dectivate Display", FSO)
+            if chrin == ord('\n'):
+                ps['Display Mode'] = 'Off'
+                myscreen.clear()
+        else:
+            mainMenu.addstr(yL, 1, str(yL) + ":Dectivate Display")
+    yL += 1
+
+###### Arduino
     if arduinoConnected is True:
         if ps['Main Menu Selection'] == yL and ps['Arduino Active'] is False:
             mainMenu.addstr(yL, 1, str(yL) + ":Activate Arduino", FSO)
             if chrin == ord('\n'):
-                ps['Arduino Active'] = True
                 ps['Arduino Active'] = True
         elif ps['Main Menu Selection'] != yL and ps['Arduino Active'] is False:
             mainMenu.addstr(yL, 1, str(yL) + ":Activate Arduino")
@@ -449,6 +519,95 @@ def drawVGauge(gLabel, resource, yCord, xCord):
         gauge.addstr(23, 1, 'Not Available')
 
 
+def drawStandardGaugeList():
+    #myscreen.vline(20, 35, curses.ACS_CKBOARD, 4)
+    #drawVGauge("Test Gauge", 42, 1, 35)
+    if fd['ElectricCharge'] != -1:
+        drawVGauge("Electricity", 'ElectricCharge', 1, 31)
+
+    if fd['Oxygen'] != -1:
+        drawVGauge("Oxygen", 'Oxygen', 1, 61)
+
+    if fd['MonoPropellant'] != -1:
+        drawVGauge("MonoProp.", 'MonoPropellant', 1, 46)
+
+    if fd['LiquidFuel'] != -1:
+        drawVGauge("LiquidFuel", 'LiquidFuel', 1, 61)
+
+    if fd['Oxidizer'] != -1:
+        drawVGauge("Oxidizer", 'Oxidizer', 1, 61)
+
+
+    if fd['LiquidH2'] != -1:
+        drawVGauge("Liquid H2", 'LiquidH2', 1, 76)
+
+    if fd['LiquidOxygen'] != -1:
+        drawVGauge("Liquid Oxygen", 'LiquidOxygen', 1, 91)
+    if fd['MMH'] != -1:
+        drawVGauge("MMH", 'MMH', 1, 76)
+    if fd['N2O4'] != -1:
+        drawVGauge("N2O4", 'N2O4', 1, 91)
+
+def drawLandingStatusWindow(yCord, xCord):
+    landingStatusW = myscreen.subwin(25, 30, yCord, xCord)
+    landingStatusW.border()
+    yL = 0  # local variable for the Y line
+    #xL = 0  # local variable for the X line
+    landingStatusW.addstr(yL, 1, "##      Earth Time:       ##", curses.A_STANDOUT)
+    yL += 1
+    landingStatusW.addstr(yL, 2, time.strftime("%a, %d %b %Y %H:%M:%S"), curses.color_pair(1))
+    yL += 1
+    yL += 1
+    landingStatusW.addstr(yL, 1, "##     Mission Time:      ##", curses.A_STANDOUT)
+    yL += 1
+    landingStatusW.addstr(yL, 4, str(round(fd['MET'], 1))
+        .zfill(21), curses.color_pair(1))
+    yL += 1
+    yL += 1
+
+    landingStatusW.addstr(yL, 1, "ASL:")
+    landingStatusW.addstr(yL, 20, str(fd['ASL'])
+        .zfill(filldigits))
+    yL += 1
+    yL += 1
+    landingStatusW.addstr(yL, 1, "Radar Alt:")
+    landingStatusW.addstr(yL, 20, str(int(fd['Height From Terrain']))
+        .zfill(filldigits))
+    yL += 1
+    yL += 1
+    landingStatusW.addstr(yL, 1, "Surface Speed:")
+    landingStatusW.addstr(yL, 20, str(round(fd['Surface Speed']))
+        .zfill(filldigits))
+    yL += 1
+    yL += 1
+    landingStatusW.addstr(yL, 1, "Vertical Speed:")
+    landingStatusW.addstr(yL, 20, str(round(fd['Vertical Speed']))
+    .zfill(filldigits))
+    yL += 1
+    yL += 1
+    landingStatusW.addstr(yL, 1, "Throttle:")
+    landingStatusW.addstr(yL, 22, str(int(fd['Throttle'] * 100))  + ' %')
+    yL += 1
+    yL += 1
+    yL += 1
+    yL += 1
+    landingStatusW.addstr(yL, 1, "Pitch:")
+    landingStatusW.addstr(yL, 22, str(int(math.degrees(fd['Pitch'])))
+    .zfill(4))
+    yL += 1
+    yL += 1
+    landingStatusW.addstr(yL, 1, "Yaw:")
+    landingStatusW.addstr(yL, 22, str(int(math.degrees(fd['Yaw'])))
+    .zfill(4))
+    yL += 1
+    yL += 1
+    landingStatusW.addstr(yL, 1, "Roll:")
+    landingStatusW.addstr(yL, 22, str(int(math.degrees(fd['Roll'])))
+    .zfill(4))
+    yL += 1
+    yL += 1
+    return yL
+
 ###  Arduino Utilities
 def push_to_arduino(inputline):
     #ser.flushOutput()
@@ -595,19 +754,24 @@ menuOpen = 0
 fd = {  # Primary data storage
 'MET': -1, 'ASL': -1, 'Ap': -1, 'Pe': -1, 'Time to Ap': -1, 'Time to Pe': -1,
 'Eccentricity': -1, 'Inclination': -1, 'Orbital Period': -1,
-'Vertical Speed': -1, 'SAS Status': -1, 'RCS Status': -1, 'Light Status': -1,
+'Vertical Speed': -1, 'Surface Speed': -1, 'Pitch': -1, 'Roll': -1, 'Yaw': -1,
+'Height From Terrain': -1,
+'Throttle': -1, 'SAS Status': -1, 'RCS Status': -1, 'Light Status': -1,
 'ElectricCharge': -1, 'Max ElectricCharge': -1,
 'LiquidFuel': -1, 'Max LiquidFuel': -1,
 'Oxidizer': -1, 'MaxOxidizer': -1,
-'SolidFuel': -1,'Max SolidFuel': -1,
+'SolidFuel': -1, 'Max SolidFuel': -1,
 'MonoPropellant': -1, 'Max MonoPropellant': -1,
 'Oxygen': -1, 'Max Oxygen': -1,  # Realisim Resources
 'LiquidH2': -1, 'Max LiquidH2': -1,
 'LiquidOxygen': -1, 'Max LiquidOxygen': -1,
+'MMH': -1, 'Max MMH': -1,
+'N2O4': -1, 'Max N2O4': -1,
 'Radio Contact': False, 'Previous Radio Contact': False}
 
 ps = {  # Program Settings
 'Main Menu is Open': False, 'Main Menu Selection': 1, 'Slection Made': False,
+'Display Mode': 'Standard',
 'Flight Transceiver Active': False,
 'Terminal Max Y': 25, 'Terminal Max X': 40,
 'Arduino Sleep Marker': 0, 'Arduino Active': False, 'Button Sleep Marker': 0,
@@ -634,7 +798,8 @@ print ps['Terminal Max Y']
 print ps['Terminal Max X']
 
 ### Flight Computer Section ##################################################
-while chrin != 48:  # Loop until the user presses the Zero key
+while chrin != 48 and __name__ == '__main__':
+    # Loop until the user presses the Zero key
     loopStartTime = time.time()
     if (ps['Terminal Max Y'], ps['Terminal Max X']) != myscreen.getmaxyx():
         myscreen.clear()
@@ -655,41 +820,26 @@ while chrin != 48:  # Loop until the user presses the Zero key
     myscreen.nodelay(1)
     myscreen.addstr(0, ps['Terminal Max X'] / 2 - 12, "Persigehl Flight Terminal")
 
-    if fd['Radio Contact'] is True and fd['Previous Radio Contact'] is True:
-        drawPrimaryStatusWindow(1, 1)
-        drawResourceWindow(26, 1)
-    elif fd['Radio Contact'] is False:
-        myscreen.addstr(ps['Terminal Max Y'] - 2, ps['Terminal Max X'] / 2 - 12,
-            "### Radio Contact Lost ###", curses.A_STANDOUT)
-    elif fd['Radio Contact'] is True and fd['Previous Radio Contact'] is False:
+
+
+    if ps['Display Mode'] is 'Standard':
+        drawStandardGaugeList()
+        if fd['Radio Contact'] is True and fd['Previous Radio Contact'] is True:
+            drawPrimaryStatusWindow(1, 1)
+            drawResourceWindow(26, 1)
+        elif fd['Radio Contact'] is False:
+            myscreen.addstr(ps['Terminal Max Y'] - 2, ps['Terminal Max X'] / 2 - 12,
+                "### Radio Contact Lost ###", curses.A_STANDOUT)
+        elif fd['Radio Contact'] is True and fd['Previous Radio Contact'] is False:
+            myscreen.clear()
+            myscreen.border()
+            drawPrimaryStatusWindow(1, 1)
+            drawResourceWindow(26, 1)
+
+    elif ps['Display Mode'] is 'Landing':
         myscreen.clear()
         myscreen.border()
-        drawPrimaryStatusWindow(1, 1)
-        drawResourceWindow(26, 1)
-
-    #myscreen.vline(20, 35, curses.ACS_CKBOARD, 4)
-    #drawVGauge("Test Gauge", 42, 1, 35)
-    if fd['ElectricCharge'] != -1:
-        drawVGauge("Electricity", 'ElectricCharge', 1, 31)
-
-    if fd['Oxygen'] != -1:
-        drawVGauge("Oxygen", 'Oxygen', 1, 61)
-
-    if fd['MonoPropellant'] != -1:
-        drawVGauge("MonoProp.", 'MonoPropellant', 1, 46)
-
-    if fd['LiquidFuel'] != -1:
-        drawVGauge("LiquidFuel", 'LiquidFuel', 1, 61)
-
-    if fd['Oxidizer'] != -1:
-        drawVGauge("Oxidizer", 'Oxidizer', 1, 61)
-
-
-    if fd['LiquidH2'] != -1:
-        drawVGauge("Liquid H2", 'LiquidH2', 1, 76)
-
-    if fd['LiquidOxygen'] != -1:
-        drawVGauge("Liquid Oxygen", 'LiquidOxygen', 1, 91)
+        drawLandingStatusWindow(1, (ps['Terminal Max X'] / 2 - 10))
 
 ### Arduino Section ##########################################################
 
@@ -772,7 +922,7 @@ while chrin != 48:  # Loop until the user presses the Zero key
     myscreen.refresh()
     chrin = myscreen.getch()
 
-    loopTimeOffset = 0.05 + loopStartTime - time.time()
+    loopTimeOffset = config.pollInterval() + loopStartTime - time.time()
         # This can be used to slow the entire program down to cycle at a
         # given interval. This is a failsafe to prevent 100% utilization
     if loopTimeOffset > 0:

@@ -146,6 +146,10 @@ def read_verticalspeed():
     result = fresh_json["alt"]
     return result
 
+def read_heightFromTerrain():
+    fresh_json = json.load(urllib2.urlopen(url + 'v.heightFromTerrain'))
+    result = fresh_json["alt"]
+    return result
 
 # Output Definitions
 
