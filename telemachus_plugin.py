@@ -12,8 +12,13 @@ import time
 import os
 import math
 import config
+import socket
 
 url = config.url()
+
+# set time out to 2 second.
+socket.setdefaulttimeout(1) 
+
 # Telemachus Definitions
     #The readings are for the active vessel unless otherwise noted
 def read_angularvelocity():
@@ -164,10 +169,13 @@ def fly_by_wire(var):
 
 def brake(var):
     if var == 2:
-        #fresh_json = json.load(urllib2.urlopen(url + 'v.gearValue'))
-        #return fresh_json["alt"]
-        return (-1)
-        #print 'The brake:read feature is not yet support by telemachus'
+        fresh_json = json.load(urllib2.urlopen(url + 'v.brakeValue'))
+        if fresh_json["alt"] == "True":
+            return 1
+        elif fresh_json["alt"] == "False":
+            return 0
+        else:
+            return fresh_json["alt"]
     elif var == 1:
         urllib2.urlopen(url + 'f.brake' + '[' + 'true' + ']')
         #print 'Setting Brake to on'
@@ -181,10 +189,14 @@ def brake(var):
 
 def gear(var):
     if var == 2:
-        #fresh_json = json.load(urllib2.urlopen(url + 'v.gearValue'))
-        #return fresh_json["alt"]
-        return (-1)
-        #print 'The gear:read feature is not yet support by telemachus'
+        fresh_json = json.load(urllib2.urlopen(url + 'v.gearValue'))
+        if fresh_json["alt"] == "True":
+            return 1
+        elif fresh_json["alt"] == "False":
+            return 0
+        else:
+            return fresh_json["alt"]
+        
     elif var == 1:
         urllib2.urlopen(url + 'f.gear' + '[' + 'true' + ']')
         #print 'Setting Gear to on'

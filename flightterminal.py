@@ -73,6 +73,20 @@ def getFlightData(dIN):
         d['Roll'] = float(tele.read_facing('roll'))
         d['Throttle'] = float(tele.read_throttle())
 
+
+
+        d['Brake Status'] = int(tele.brake(2))
+        if d['Brake Status'] == 1:
+            d['Brake Status'] = True
+        elif d['Brake Status'] == 0:
+            d['Brake Status'] = False
+
+        d['Gear Status'] = int(tele.gear(2))
+        if d['Gear Status'] == 1:
+            d['Gear Status'] = True
+        elif d['Gear Status'] == 0:
+            d['Gear Status'] = False
+
         d['SAS Status'] = int(tele.sas(2))
         d['RCS Status'] = int(tele.rcs(2))
         d['Light Status'] = int(tele.light(2))
@@ -199,10 +213,10 @@ def drawPrimaryStatusWindow(yCord, xCord):
     primaryStatusW.addstr(yL, 20, str(fd['Light Status']).ljust(5))
     yL += 1
     primaryStatusW.addstr(yL, 1, "Landing Gear:")
-    primaryStatusW.addstr(yL, 20, str(ps['Gear Status']).ljust(5))
+    primaryStatusW.addstr(yL, 20, str(fd['Gear Status']).ljust(5))
     yL += 1
     primaryStatusW.addstr(yL, 1, "Brake Status:")
-    primaryStatusW.addstr(yL, 20, str(ps['Brake Status']).ljust(5))
+    primaryStatusW.addstr(yL, 20, str(fd['Brake Status']).ljust(5))
     yL += 1
     return yL
 
@@ -759,15 +773,17 @@ fd = {  # Primary data storage
 'Throttle': -1, 'SAS Status': -1, 'RCS Status': -1, 'Light Status': -1,
 'ElectricCharge': -1, 'Max ElectricCharge': -1,
 'LiquidFuel': -1, 'Max LiquidFuel': -1,
-'Oxidizer': -1, 'MaxOxidizer': -1,
-'SolidFuel': -1, 'Max SolidFuel': -1,
+'Oxidizer': -1, 'Max Oxidizer': -1,
+'SolidFuel': -1,'Max SolidFuel': -1,
 'MonoPropellant': -1, 'Max MonoPropellant': -1,
 'Oxygen': -1, 'Max Oxygen': -1,  # Realisim Resources
 'LiquidH2': -1, 'Max LiquidH2': -1,
 'LiquidOxygen': -1, 'Max LiquidOxygen': -1,
 'MMH': -1, 'Max MMH': -1,
 'N2O4': -1, 'Max N2O4': -1,
-'Radio Contact': False, 'Previous Radio Contact': False}
+'Radio Contact': False, 'Previous Radio Contact': False,
+'Gear Status':False,
+'Brake Status':False}
 
 ps = {  # Program Settings
 'Main Menu is Open': False, 'Main Menu Selection': 1, 'Slection Made': False,
@@ -788,14 +804,13 @@ arduino = {  # Arduino Configurtion, using rows
 }
 arduinoSleepMarker = 0
 buttonSleepMarker = 0
-flightDataSleepMarker = 0
+flightDataSleepMarker = config.pollInterval()
 memB = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # Current serial input
 memBOLD = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # Old serial input
 n = 0
 ps['Terminal Max Y'], ps['Terminal Max X'] = myscreen.getmaxyx()
 
 print ps['Terminal Max Y']
-print ps['Terminal Max X']
 
 ### Flight Computer Section ##################################################
 while chrin != 48 and __name__ == '__main__':
@@ -804,15 +819,17 @@ while chrin != 48 and __name__ == '__main__':
     if (ps['Terminal Max Y'], ps['Terminal Max X']) != myscreen.getmaxyx():
         myscreen.clear()
     if ps['Flight Transceiver Active'] is True:
-        if flightDataSleepMarker > config.pollInterval() and (
+        if flightDataSleepMarker >= config.pollInterval() and (
             fd['Radio Contact'] is True):
             fd = getFlightData(fd)
+            flightDataSleepMarker = 0
     #### Expand this into an actual error handling bit.
     # Do a single test once per second that only polls one item
     # Alternativel, do actually multithreading w/ the URL stuff in the other
     # thread. That makes far more sense.
-        elif flightDataSleepMarker > config.pollInterval() + 2:
+        elif flightDataSleepMarker >= config.pollInterval() + 2:
             fd = getFlightData(fd)
+            flightDataSleepMarker = 0
 
     myscreen.border()
     ps['Terminal Max Y'], ps['Terminal Max X'] = myscreen.getmaxyx()
